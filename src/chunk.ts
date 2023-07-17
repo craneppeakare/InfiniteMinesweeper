@@ -4,7 +4,7 @@ import Cell from './cell';
 export default class Chunk {
     static WIDTH = 10;
     static HEIGHT = 10;
-    static minesPerChunk = 20;
+    static minesPerChunk = 15;
 
     private cellData: Cell[][] = [];
 
@@ -38,12 +38,18 @@ export default class Chunk {
     * @returns void
     */
     spawnMines(x: number, y: number) {
-        let mineX, mineY;
+        let mineX: number, mineY: number;
+        let noMineCoords = [];
+        for (let dy = y-1; dy <= y+1; dy++){
+            for (let dx = x-1; dx <= x+1; dx++) {
+                noMineCoords.push({x: dx, y: dy});
+            }
+        }
         for (let i = 0; i < Chunk.minesPerChunk; i++) {
             do {
                 mineX = Math.floor(Math.random() * Chunk.WIDTH);
                 mineY = Math.floor(Math.random() * Chunk.HEIGHT);
-            } while (this.cellData[mineY][mineX].isAMine || (mineX === x && mineY === y))
+            } while (noMineCoords.some(c => c.x == mineX && c.y == mineY))
             this.cellData[mineY][mineX].isAMine = true;
         }
     }
@@ -87,11 +93,9 @@ export default class Chunk {
     */
     chordTile(x: number, y: number) {
         const neighbors = this.getUnrevealedNeighborTiles(x, y);
-        let hazards = neighbors.filter((n) => { n.isFlagged }).length;
-        console.log("hazards = " + hazards + "; minesNearby: " + this.cellData[y][x].minesNearby);
-        if (hazards === this.cellData[y][x].minesNearby) {
-            const n = this.getUnrevealedNeighborTiles(x, y).filter((n) => { !n.isFlagged });
-            n.forEach((n) => { n.reveal() });
+        const flagged = neighbors.filter(n => n.isFlagged).length;
+        if (flagged === this.cellData[y][x].minesNearby) {
+            neighbors.forEach(n => n.reveal());
         }
     }
 

@@ -25,6 +25,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     preload () {
+        // this.load.image('revealparticle', 'assets/revealParticle.png');
     }
 
     /**
@@ -42,7 +43,8 @@ export default class InfiniteSweeper extends Phaser.Scene {
             .setInteractive()
             .on('pointerup', () => { this.switchMode() });
 
-        this.events.addListener('tile-pressed', (coords: {x: number, y: number}) => {this.onTilePressed(coords)});
+        this.events.addListener('tile-pressed', (coords: {x: number, y: number}) => this.onTilePressed(coords));
+        this.events.addListener('gameover', () => this.onGameover());
     }
 
     /**
@@ -83,6 +85,19 @@ export default class InfiniteSweeper extends Phaser.Scene {
         } else {
             this.chunkList[0].flagTile(coords.x, coords.y);
         }
+    }
+
+    /**
+    * Receiver for the "gameover" event. Ends the game by spawning the gameover layer
+    *
+    * @returns void
+    */
+    private onGameover() {
+        this.add.text(config.width/2, config.height/2, "GAME OVER")
+            .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px' })
+            .setOrigin(0.5, 0.5);
+        this.scene.pause();
+        // todo
     }
 }
 

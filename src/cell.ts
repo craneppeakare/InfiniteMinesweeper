@@ -7,6 +7,13 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     private static COVER_ODD_COLOR = 0x268d41;
     private static REVEALED_EVEN_COLOR = 0xcfbb93;
     private static REVEALED_ODD_COLOR = 0xba9872;
+    private static LABEL_COLORS = ['#0000ff',
+                                  '#008000',
+                                  '#ff0000',
+                                  '#000080',
+                                  '#800000',
+                                  '#008080',
+                                  '#808080'];
 
     private id: {x: number, y: number};
     private chunk: Chunk;
@@ -28,7 +35,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     * @returns a Cell
     */
     constructor(scene: Phaser.Scene, pos: { x: number, y: number }, id: { x: number, y: number}, chunk: Chunk) {
-        super(scene, pos.x, pos.y, 64, 64, (id.x+id.y)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR);
+        super(scene, pos.x, pos.y, 64, 64, 0xffffff);
         this.setOrigin(0, 0)
             .setInteractive()
             .on('pointerup', this.on_pointerup);
@@ -36,6 +43,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.id = id;
         this.chunk = chunk;
         scene.add.existing(this);
+        this.updateColor();
     }
 
     /**
@@ -44,28 +52,20 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     * @returns void
     */
     reveal() {
-        if (this.isFlagged) return;
+        if (this.isFlagged || this.isRevealed) return;
         this.isRevealed = true;
         if (this.isAMine) {
             this.fillColor = 0xff0000;
+            this.scene.events.emit('gameover');
         } else {
-            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.REVEALED_EVEN_COLOR : Cell.REVEALED_ODD_COLOR;
+            this.updateColor();
             let neighbors = this.chunk.getUnrevealedNeighborTiles(this.id.x, this.id.y);
             this.minesNearby = neighbors.filter((n) => n.isAMine).length
             if (this.minesNearby) {
                 let pos = this.getCenter();
                 const label = this.scene.add.text(pos.x, pos.y, this.minesNearby.toString(), this.labelStyle)
                     .setOrigin(0.5,0.5);
-                switch (this.minesNearby) {
-                    case 1: label.setColor('#0000ff'); break;
-                    case 2: label.setColor('#008000'); break;
-                    case 3: label.setColor('#ff0000'); break;
-                    case 4: label.setColor('#000080'); break;
-                    case 5: label.setColor('#800000'); break;
-                    case 6: label.setColor('#008080'); break;
-                    case 7: label.setColor('#808080'); break;
-                    default: break;
-                }
+                label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1])
             } else {
                 neighbors.forEach((n) => {n.reveal()});
             }
@@ -82,7 +82,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         if (this.isFlagged) {
             this.fillColor = 0xff00ff;
         } else {
-            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR;
+            this.updateColor();
         }
     }
 
@@ -95,4 +95,16 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.scene.events.emit('tile-pressed', {x: this.id.x, y: this.id.y});
     }
 
+    /**
+     * Updates the color that the tile should be in depending on if it's revealed or not.
+     *
+     * @returns void
+     */
+    private updateColor() {
+        if (this.isRevealed) {
+            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.REVEALED_EVEN_COLOR : Cell.REVEALED_ODD_COLOR;
+        } else {
+            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR;
+        }
+    }
 }
