@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser';
-import * as WebFontLoader from 'webfontloader';
 import Cell from './cell';
 import Chunk from './chunk';
 
@@ -11,15 +10,28 @@ export default class InfiniteSweeper extends Phaser.Scene {
 
     firstClick = true;
 
+    /**
+    * Constructor for the main Scene
+    *
+    * @returns a Scene
+    */
     constructor () {
         super('Infinite Minesweeper');
     }
 
+    /**
+    * Preloads any assets needed for the scene. Runs before the create() method.
+    *
+    * @returns void
+    */
     preload () {
-        // this.load.image('tilemap', 'assets/minetiles.png');
-        // WebFontLoader.load({ google: { families: ['Press Start 2P'] } });
     }
 
+    /**
+    * Runs once when scene is created. Spawns the necessary chunks for the game.
+    *
+    * @returns void
+    */
     create () {
         const centerOffset = (config.width / 2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
         const chunk = new Chunk(this, centerOffset, Cell.TILE_SIZE / 2);
@@ -30,13 +42,23 @@ export default class InfiniteSweeper extends Phaser.Scene {
             .setInteractive()
             .on('pointerup', () => { this.switchMode() });
 
-        this.events.addListener('tile-pressed', (coords: {x: number, y: number}) => {this.on_tile_pressed(coords)});
+        this.events.addListener('tile-pressed', (coords: {x: number, y: number}) => {this.onTilePressed(coords)});
     }
 
-    update() {
+    /**
+    * This method is called once per game step while the scene is running.
+    *
+    * @returns void
+    */
+    update(time: number, delta: number) {
         // sdk
     }
 
+    /**
+    * Private function that toggles from reveal mode to flag mode
+    *
+    * @returns void
+    */
     private switchMode() {
         this.flagMode = !this.flagMode;
         if (this.flagMode) {
@@ -46,7 +68,12 @@ export default class InfiniteSweeper extends Phaser.Scene {
         }
     }
 
-    private on_tile_pressed(coords: {x: number, y: number}) {
+    /**
+    * Receiver for the "tile-pressed" event. Sends the event to the corresponding chunk
+    *
+    * @returns void
+    */
+    private onTilePressed(coords: {x: number, y: number}) {
         if (!this.flagMode) {
             if (this.firstClick) {
                 this.chunkList[0].spawnMines(coords.x, coords.y);

@@ -8,8 +8,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     private static REVEALED_EVEN_COLOR = 0xcfbb93;
     private static REVEALED_ODD_COLOR = 0xba9872;
 
-    private xId;
-    private yId;
+    private id: {x: number, y: number};
     private chunk: Chunk;
     private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px' };
 
@@ -18,30 +17,40 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     isFlagged = false;
     minesNearby = 0;
 
-    constructor(scene: Phaser.Scene, xPos: number, yPos: number, xId: number, yId: number, chunk: Chunk) {
-        super(scene, xPos, yPos, 64, 64, (xId+yId)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR);
+    /**
+    * Constructor for a Cell
+    * 
+    * @param scene - The scene which this Cell belongs to
+    * @param pos - The position of the Cell on the screen
+    * @param id - The id of the Cell
+    * @param chunk - The chunk which this cell belongs to
+    *
+    * @returns a Cell
+    */
+    constructor(scene: Phaser.Scene, pos: { x: number, y: number }, id: { x: number, y: number}, chunk: Chunk) {
+        super(scene, pos.x, pos.y, 64, 64, (id.x+id.y)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR);
         this.setOrigin(0, 0)
             .setInteractive()
             .on('pointerup', this.on_pointerup);
 
-        this.xId = xId;
-        this.yId = yId;
+        this.id = id;
         this.chunk = chunk;
         scene.add.existing(this);
     }
 
-    private on_pointerup() {
-        this.scene.events.emit('tile-pressed', {x: this.xId, y: this.yId});
-    }
-
+    /**
+    * Reveals the tile
+    *
+    * @returns void
+    */
     reveal() {
         if (this.isFlagged) return;
         this.isRevealed = true;
         if (this.isAMine) {
             this.fillColor = 0xff0000;
         } else {
-            this.fillColor = (this.xId+this.yId)%2 ? Cell.REVEALED_EVEN_COLOR : Cell.REVEALED_ODD_COLOR;
-            let neighbors = this.chunk.getNeighborTiles(this.xId, this.yId);
+            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.REVEALED_EVEN_COLOR : Cell.REVEALED_ODD_COLOR;
+            let neighbors = this.chunk.getUnrevealedNeighborTiles(this.id.x, this.id.y);
             this.minesNearby = neighbors.filter((n) => n.isAMine).length
             if (this.minesNearby) {
                 let pos = this.getCenter();
@@ -63,17 +72,27 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         }
     }
 
-    chord() {
-        // 
-    }
-
+    /**
+    * Places a flag on top of the tile and prevents revealing
+    *
+    * @returns void
+    */
     flag() {
         this.isFlagged = !this.isFlagged;
         if (this.isFlagged) {
             this.fillColor = 0xff00ff;
         } else {
-            this.fillColor = (this.xId+this.yId)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR;
+            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR;
         }
+    }
+
+    /**
+    * Emits an event to communicate to the top level scene that this cell has been clicked on
+    *
+    * @returns void
+    */
+    private on_pointerup() {
+        this.scene.events.emit('tile-pressed', {x: this.id.x, y: this.id.y});
     }
 
 }
