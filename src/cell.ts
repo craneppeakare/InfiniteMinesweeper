@@ -59,15 +59,11 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             this.scene.events.emit('gameover');
         } else {
             this.updateColor();
-            let neighbors = this.chunk.getUnrevealedNeighborTiles(this.id.x, this.id.y);
-            this.minesNearby = neighbors.filter((n) => n.isAMine).length
             if (this.minesNearby) {
                 let pos = this.getCenter();
                 const label = this.scene.add.text(pos.x, pos.y, this.minesNearby.toString(), this.labelStyle)
                     .setOrigin(0.5,0.5);
                 label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1])
-            } else {
-                neighbors.forEach((n) => {n.reveal()});
             }
         }
     }
@@ -84,6 +80,13 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         } else {
             this.updateColor();
         }
+    }
+
+    /**
+    * @returns the id of this Cell
+    */
+    getId(): {x: number, y: number} {
+        return Object.create(this.id);
     }
 
     /**

@@ -3,10 +3,12 @@ import Cell from './cell';
 
 export default class Chunk {
     static WIDTH = 10;
-    static HEIGHT = 10;
+    static HEIGHT = 6;
     static minesPerChunk = 15;
 
+    private scene: Phaser.Scene;
     private cellData: Cell[][] = [];
+    private tilesRevealed = 0;
 
     /**
     * Constructor for a Chunk
@@ -18,9 +20,10 @@ export default class Chunk {
     * @returns a Chunk
     */
     constructor(scene: Phaser.Scene, xPos: number, yPos: number) {
-        for (let y = 0; y < Chunk.WIDTH; y++) {
+        this.scene = scene;
+        for (let y = 0; y < Chunk.HEIGHT; y++) {
             this.cellData.push([]);
-            for (let x = 0; x < Chunk.HEIGHT; x++) {
+            for (let x = 0; x < Chunk.WIDTH; x++) {
                 const pos = {x: xPos + (x*Cell.TILE_SIZE), y: yPos + (y*Cell.TILE_SIZE)}
                 const id = {x, y}
                 const cell = new Cell(scene, pos, id, this);
@@ -46,16 +49,23 @@ export default class Chunk {
             }
         }
         for (let i = 0; i < Chunk.minesPerChunk; i++) {
+            // Choose random coords (mineX, mineY) to turn into a mine
             do {
                 mineX = Math.floor(Math.random() * Chunk.WIDTH);
                 mineY = Math.floor(Math.random() * Chunk.HEIGHT);
             } while (noMineCoords.some(c => c.x == mineX && c.y == mineY))
             this.cellData[mineY][mineX].isAMine = true;
+            noMineCoords.push({x: mineX, y: mineY});
+
+            // Update the tiles nearby to see this mine
+            const neighbors = this.getUnrevealedNeighborTiles(mineX, mineY);
+            neighbors.forEach(n => n.minesNearby += 1);
         }
     }
 
     /**
-    * Reveals the mine located at the specified coordinates
+    * Reveals the mine located at the specified coordinates. And may recurse to nearby
+    * mines if needed.
     *
     * @param x - The x coordinate of the Cell to be revealed
     * @param y - The y coordinate of the Cell to be revealed
@@ -67,7 +77,15 @@ export default class Chunk {
             this.chordTile(x, y);
         } else {
             this.cellData[y][x].reveal();
+            this.tilesRevealed += 1;
         }
+        if (!this.cellData[y][x].minesNearby) {
+            const neighbors = this.getUnrevealedNeighborTiles(x, y);
+            neighbors.forEach(n => {
+                const id = n.getId();
+                this.revealTile(id.x, id.y)});
+        }
+        this.checkIfComplete();
     }
 
     /**
@@ -93,10 +111,12 @@ export default class Chunk {
     */
     chordTile(x: number, y: number) {
         const neighbors = this.getUnrevealedNeighborTiles(x, y);
-        const flagged = neighbors.filter(n => n.isFlagged).length;
-        if (flagged === this.cellData[y][x].minesNearby) {
+        const flagged = neighbors.filter(n => n.isFlagged);
+        if (flagged.length === this.cellData[y][x].minesNearby) {
             neighbors.forEach(n => n.reveal());
+            this.tilesRevealed += neighbors.length - flagged.length;
         }
+        this.checkIfComplete();
     }
 
     /**
@@ -117,5 +137,21 @@ export default class Chunk {
             }
         }
         return neighbors;
+    }
+
+    /**
+     * Checks if the chunk has been fully cleared of mines and emits an event to the 
+     * scene if it is.
+     *
+     * @returns void
+     */
+    private checkIfComplete() {
+        const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-Chunk.minesPerChunk;
+        if (this.tilesRevealed >= tilesToReveal) {
+            // TODO - emit the event bruh
+            this.scene.add.text(720/2, 1080/2, "Chunk Cleared!")
+                .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px' })
+                .setOrigin(0.5, 0.5);
+        }
     }
 }
