@@ -15,7 +15,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
                                   '#008080',
                                   '#808080'];
 
-    private id: {x: number, y: number};
+    private id: {x: number, y: number, chunkId: number};
     private chunk: Chunk;
     private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px' };
 
@@ -23,6 +23,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     isRevealed = false;
     isFlagged = false;
     minesNearby = 0;
+    label;
 
     /**
     * Constructor for a Cell
@@ -34,7 +35,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     *
     * @returns a Cell
     */
-    constructor(scene: Phaser.Scene, pos: { x: number, y: number }, id: { x: number, y: number}, chunk: Chunk) {
+    constructor(scene: Phaser.Scene, pos: { x: number, y: number }, id: { x: number, y: number, chunkId: number}, chunk: Chunk) {
         super(scene, pos.x, pos.y, 64, 64, 0xffffff);
         this.setOrigin(0, 0)
             .setInteractive()
@@ -43,6 +44,8 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.id = id;
         this.chunk = chunk;
         scene.add.existing(this);
+        this.label = this.scene.add.text(this.getCenter().x, this.getCenter().y, '', this.labelStyle)
+            .setOrigin(0.5, 0.5);
         this.updateColor();
     }
 
@@ -60,10 +63,8 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         } else {
             this.updateColor();
             if (this.minesNearby) {
-                let pos = this.getCenter();
-                const label = this.scene.add.text(pos.x, pos.y, this.minesNearby.toString(), this.labelStyle)
-                    .setOrigin(0.5,0.5);
-                label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1])
+                this.label.setText(this.minesNearby.toString());
+                this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1])
             }
         }
     }
@@ -85,7 +86,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     /**
     * @returns the id of this Cell
     */
-    getId(): {x: number, y: number} {
+    getId(): {x: number, y: number, chunkId: number} {
         return Object.create(this.id);
     }
 
@@ -95,7 +96,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     * @returns void
     */
     private on_pointerup() {
-        this.scene.events.emit('tile-pressed', {x: this.id.x, y: this.id.y});
+        this.scene.events.emit('tile-pressed', this.id);
     }
 
     /**

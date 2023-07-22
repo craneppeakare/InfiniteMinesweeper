@@ -4,11 +4,12 @@ import Cell from './cell';
 export default class Chunk {
     static WIDTH = 10;
     static HEIGHT = 6;
-    static minesPerChunk = 15;
+    static minesPerChunk = 5;
 
     private scene: Phaser.Scene;
     private cellData: Cell[][] = [];
     private tilesRevealed = 0;
+    private chunkId: number;
 
     /**
     * Constructor for a Chunk
@@ -19,13 +20,14 @@ export default class Chunk {
     *
     * @returns a Chunk
     */
-    constructor(scene: Phaser.Scene, xPos: number, yPos: number) {
+    constructor(scene: Phaser.Scene, xPos: number, yPos: number, chunkId: number) {
         this.scene = scene;
+        this.chunkId = chunkId;
         for (let y = 0; y < Chunk.HEIGHT; y++) {
             this.cellData.push([]);
             for (let x = 0; x < Chunk.WIDTH; x++) {
                 const pos = {x: xPos + (x*Cell.TILE_SIZE), y: yPos + (y*Cell.TILE_SIZE)}
-                const id = {x, y}
+                const id = {x, y, chunkId}
                 const cell = new Cell(scene, pos, id, this);
                 this.cellData[y].push(cell);
             }
@@ -97,7 +99,9 @@ export default class Chunk {
     * @returns void
     */
     flagTile(x: number, y: number) {
-        this.cellData[y][x].flag();
+        if (!this.cellData[y][x].isRevealed) {
+            this.cellData[y][x].flag();
+        }
     }
 
     /**
@@ -113,7 +117,7 @@ export default class Chunk {
         const neighbors = this.getUnrevealedNeighborTiles(x, y);
         const flagged = neighbors.filter(n => n.isFlagged);
         if (flagged.length === this.cellData[y][x].minesNearby) {
-            neighbors.forEach(n => n.reveal());
+            neighbors.forEach(n => n.reveal()); // TODO - call this chunk's reveal function instead
             this.tilesRevealed += neighbors.length - flagged.length;
         }
         this.checkIfComplete();
@@ -140,6 +144,15 @@ export default class Chunk {
     }
 
     /**
+    * Returns a list of all associated Cells in the chunk.
+    *
+    * @returns Cell[]
+    */
+    getAllCells() {
+        return this.cellData.flat();
+    }
+
+    /**
      * Checks if the chunk has been fully cleared of mines and emits an event to the 
      * scene if it is.
      *
@@ -148,10 +161,7 @@ export default class Chunk {
     private checkIfComplete() {
         const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-Chunk.minesPerChunk;
         if (this.tilesRevealed >= tilesToReveal) {
-            // TODO - emit the event bruh
-            this.scene.add.text(720/2, 1080/2, "Chunk Cleared!")
-                .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px' })
-                .setOrigin(0.5, 0.5);
+            this.scene.events.emit('chunk-cleared', this.chunkId);
         }
     }
 }

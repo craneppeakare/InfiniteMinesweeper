@@ -1,9 +1,14 @@
 import * as Phaser from 'phaser';
 import Cell from './cell';
 import Chunk from './chunk';
+import * as Config from './config';
 
 export default class InfiniteSweeper extends Phaser.Scene {
+    private CHUNKS_VISIBLE = 2;
+
     private modeSwitchButton: Phaser.GameObjects.Rectangle;
+    private chunksCleared = 0;
+    private score: number;
 
     flagMode = false;
     chunkList: Chunk[] = [];
@@ -34,16 +39,21 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     create () {
-        const centerOffset = (config.width / 2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
-        const chunk = new Chunk(this, centerOffset, Cell.TILE_SIZE / 2);
-        this.chunkList.push(chunk);
+        const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
 
-        this.modeSwitchButton = this.add.rectangle((config.width / 2) - (Cell.TILE_SIZE / 2), config.height - 128, 64, 64, 0x00ff00)
+        for (let i = 0; i < this.CHUNKS_VISIBLE; i++) {
+            this.chunkList.push(new Chunk(this, centerOffset, (Cell.TILE_SIZE/2)+(i*Cell.TILE_SIZE*Chunk.HEIGHT) , i));
+        }
+        // const chunk = new Chunk(this, centerOffset, Cell.TILE_SIZE / 2, 0);
+        // this.chunkList.push(chunk);
+
+        this.modeSwitchButton = this.add.rectangle((Config.GAME_WIDTH/2) - (Cell.TILE_SIZE / 2), Config.GAME_HEIGHT - 128, 64, 64, 0x00ff00)
             .setOrigin(0, 0)
             .setInteractive()
             .on('pointerup', () => { this.switchMode() });
 
-        this.events.addListener('tile-pressed', (coords: {x: number, y: number}) => this.onTilePressed(coords));
+        this.events.addListener('tile-pressed', (coords: {x: number, y: number, chunkId: number}) => this.onTilePressed(coords));
+        this.events.addListener('chunk-cleared', (chunkId: number) => this.chunkCleared(chunkId));
         this.events.addListener('gameover', () => this.onGameover());
     }
 
@@ -75,16 +85,45 @@ export default class InfiniteSweeper extends Phaser.Scene {
     *
     * @returns void
     */
-    private onTilePressed(coords: {x: number, y: number}) {
+    private onTilePressed(coords: {x: number, y: number, chunkId: number}) {
+        const chunkIndex = coords.chunkId - this.chunksCleared;
         if (!this.flagMode) {
             if (this.firstClick) {
-                this.chunkList[0].spawnMines(coords.x, coords.y);
+                this.chunkList.forEach((chunk, i) => {
+                    i === coords.chunkId - this.chunksCleared ?
+                        chunk.spawnMines(coords.x, coords.y) :
+                        chunk.spawnMines(-2, -2);
+                })
+                // this.chunkList[chunkIndex].spawnMines(coords.x, coords.y);
                 this.firstClick = false;
             }
-            this.chunkList[0].revealTile(coords.x, coords.y);
+            this.chunkList[chunkIndex].revealTile(coords.x, coords.y);
         } else {
-            this.chunkList[0].flagTile(coords.x, coords.y);
+            this.chunkList[chunkIndex].flagTile(coords.x, coords.y);
         }
+    }
+
+    /**
+    * Receiver for the "chunk-cleared" event. Shifts all chunks down
+    *
+    * @returns void
+    */
+    private chunkCleared(chunkId: number) {
+        // const chunkIndex = chunkId - this.chunksCleared;
+        const cells = this.chunkList.pop().getAllCells();
+        this.tweens.add({
+            targets: cells,
+            y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
+            ease: 'Linear',
+            duration: 1000,
+        });
+        this.tweens.add({
+            targets: cells.map(c => c.label),
+            y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
+            'label.x': '+=200',
+            ease: 'Linear',
+            duration: 1000,
+        });
     }
 
     /**
@@ -93,20 +132,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     private onGameover() {
-        this.add.text(config.width/2, config.height/2, "GAME OVER")
-            .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px' })
-            .setOrigin(0.5, 0.5);
         this.scene.pause();
-        // todo
+        this.scene.run('Gameover', {score: this.score});
     }
 }
-
-const config = {
-    type: Phaser.AUTO,
-    backgroundColor: '#5498c4',
-    width: 720,
-    height: 1080,
-    scene: InfiniteSweeper
-};
-
-const game = new Phaser.Game(config);
