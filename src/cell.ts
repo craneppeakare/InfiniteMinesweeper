@@ -16,9 +16,9 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
                                   '#808080'];
 
     private id: {x: number, y: number, chunkId: number};
-    private chunk: Chunk;
     private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px' };
 
+    chunk: Chunk;
     isAMine = false;
     isRevealed = false;
     isFlagged = false;

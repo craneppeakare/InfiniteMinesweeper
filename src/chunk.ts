@@ -8,8 +8,13 @@ export default class Chunk {
 
     private scene: Phaser.Scene;
     private cellData: Cell[][] = [];
+    private minesToFlagLeft = Chunk.minesPerChunk;
     private tilesRevealed = 0;
     private chunkId: number;
+
+    nextChunk: Chunk;
+    prevChunk: Chunk;
+    minesLeftLabel: Phaser.GameObjects.Text;
 
     /**
     * Constructor for a Chunk
@@ -23,6 +28,10 @@ export default class Chunk {
     constructor(scene: Phaser.Scene, xPos: number, yPos: number, chunkId: number) {
         this.scene = scene;
         this.chunkId = chunkId;
+        const style = { fontFamily: 'Silkscreen', fontSize: '24px' };
+        this.minesLeftLabel = scene.add.text(xPos+(Cell.TILE_SIZE*Chunk.WIDTH), yPos, this.minesToFlagLeft.toString(), style)
+            .setOrigin(0, 0)
+            .setColor('#aa0000');
         for (let y = 0; y < Chunk.HEIGHT; y++) {
             this.cellData.push([]);
             for (let x = 0; x < Chunk.WIDTH; x++) {
@@ -85,7 +94,7 @@ export default class Chunk {
             const neighbors = this.getUnrevealedNeighborTiles(x, y);
             neighbors.forEach(n => {
                 const id = n.getId();
-                this.revealTile(id.x, id.y)});
+                n.chunk.revealTile(id.x, id.y)});
         }
         this.checkIfComplete();
     }
@@ -101,6 +110,10 @@ export default class Chunk {
     flagTile(x: number, y: number) {
         if (!this.cellData[y][x].isRevealed) {
             this.cellData[y][x].flag();
+            this.cellData[y][x].isFlagged
+                ? this.minesToFlagLeft -= 1
+                : this.minesToFlagLeft += 1;
+            this.minesLeftLabel.setText(this.minesToFlagLeft.toString());
         }
     }
 
@@ -117,8 +130,9 @@ export default class Chunk {
         const neighbors = this.getUnrevealedNeighborTiles(x, y);
         const flagged = neighbors.filter(n => n.isFlagged);
         if (flagged.length === this.cellData[y][x].minesNearby) {
-            neighbors.forEach(n => n.reveal()); // TODO - call this chunk's reveal function instead
-            this.tilesRevealed += neighbors.length - flagged.length;
+            neighbors
+                .filter(n => !n.isFlagged)
+                .forEach(n => n.chunk.revealTile(n.getId().x, n.getId().y));
         }
         this.checkIfComplete();
     }
@@ -135,9 +149,19 @@ export default class Chunk {
         let neighbors: Cell[] = [];
         for (let dy = y-1; dy <= y+1; dy++) {
             for (let dx = x-1; dx <= x+1; dx++) {
-                if (dx >= 0 && dx < Chunk.WIDTH && dy >= 0 && dy < Chunk.HEIGHT)
-                    if (!this.cellData[dy][dx].isRevealed)
-                        neighbors.push(this.cellData[dy][dx]);
+                if (dx < 0 || dx >= Chunk.WIDTH ) continue;
+                let cell: Cell;
+                if (dy < 0) {
+                    if (!this.nextChunk) continue;
+                    cell = this.nextChunk.cellData[Chunk.HEIGHT-1][dx];
+                } else if (dy >= Chunk.HEIGHT) {
+                    if (!this.prevChunk) continue;
+                    cell = this.prevChunk.cellData[0][dx]
+                } else {
+                    cell = this.cellData[dy][dx];
+                }
+
+                if (cell && !cell.isRevealed) neighbors.push(cell);
             }
         }
         return neighbors;
