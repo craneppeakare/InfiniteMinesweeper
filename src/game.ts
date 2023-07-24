@@ -6,7 +6,6 @@ import * as Config from './config';
 export default class InfiniteSweeper extends Phaser.Scene {
     private NUMBER_OF_CHUNKS = 2;
 
-    private modeSwitchButton: Phaser.GameObjects.Rectangle;
     private chunksCleared = 0;
     private score: number;
 
@@ -42,19 +41,18 @@ export default class InfiniteSweeper extends Phaser.Scene {
         const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
 
         for (let i = 0; i < this.NUMBER_OF_CHUNKS; i++) {
-            const chunk = new Chunk(this, centerOffset, (Cell.TILE_SIZE/2)+(i*Cell.TILE_SIZE*Chunk.HEIGHT) , i);
+            // 32 + 384
+            const chunk = new Chunk(this, centerOffset, 416-(i*Cell.TILE_SIZE*Chunk.HEIGHT), i);
             this.chunkList.push(chunk);
             if (i != 0) {
-                chunk.nextChunk = this.chunkList[i-1];
-                this.chunkList[i-1].prevChunk = chunk;
+                chunk.prevChunk = this.chunkList[i-1];
+                this.chunkList[i-1].nextChunk = chunk;
             }
         }
 
-        this.modeSwitchButton = this.add.rectangle((Config.GAME_WIDTH/2) - (Cell.TILE_SIZE / 2), Config.GAME_HEIGHT - 128, 64, 64, 0x00ff00)
-            .setOrigin(0, 0)
-            .setInteractive()
-            .on('pointerup', () => { this.switchMode() });
-
+        this.game.events.addListener('mode-switch', () => {
+            this.flagMode = !this.flagMode;
+        });
         this.events.addListener('tile-pressed', (coords: {x: number, y: number, chunkId: number}) => this.onTilePressed(coords));
         this.events.addListener('chunk-cleared', (chunkId: number) => this.chunkCleared(chunkId));
         this.events.addListener('gameover', () => this.onGameover());
@@ -67,20 +65,6 @@ export default class InfiniteSweeper extends Phaser.Scene {
     */
     update(time: number, delta: number) {
         // sdk
-    }
-
-    /**
-    * Private function that toggles from reveal mode to flag mode
-    *
-    * @returns void
-    */
-    private switchMode() {
-        this.flagMode = !this.flagMode;
-        if (this.flagMode) {
-            this.modeSwitchButton.fillColor = 0xff00ff;
-        } else {
-            this.modeSwitchButton.fillColor = 0x00ff00;
-        }
     }
 
     /**
@@ -100,6 +84,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
                 this.firstClick = false;
             }
             this.chunkList[chunkIndex].revealTile(coords.x, coords.y);
+            this.chunkList[chunkIndex].checkIfComplete();
         } else {
             this.chunkList[chunkIndex].flagTile(coords.x, coords.y);
         }
@@ -111,26 +96,79 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     private chunkCleared(chunkId: number) {
-        // const chunkIndex = chunkId - this.chunksCleared;
-        const chunk = this.chunkList.pop()
-        const cells = chunk.getAllCells();
+        console.log("chunkid: " + chunkId + ", chunkscleared: " + this.chunksCleared);
+        if (this.chunkList[chunkId - this.chunksCleared].isCleared) {
+            // Spawn in a new chunk
+            const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
+            const chunk = new Chunk(this,
+                centerOffset,
+                (Cell.TILE_SIZE/2)-(Cell.TILE_SIZE*Chunk.HEIGHT),
+                this.chunksCleared+this.NUMBER_OF_CHUNKS);
+            chunk.prevChunk = this.chunkList[this.chunkList.length - 1];
+            this.chunkList[this.chunkList.length - 1].nextChunk = chunk;
+            chunk.spawnMines(-2, -2);
+            this.chunkList.push(chunk);
+
+            // Scroll chunks down
+            this.scrollAllChunksDown(chunkId);
+            this.chunksCleared++;
+        }
+    }
+
+    /**
+    * Shifts all chunks down
+    *
+    * @returns void
+    */
+    private scrollAllChunksDown(chunkId: number) {
+        const lastChunk = this.chunkList.shift();
+        const lastChunkCells = lastChunk.getAllCells();
         this.tweens.add({
-            targets: cells,
+            targets: lastChunkCells.map(c => c.label),
             y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
             ease: 'Linear',
             duration: 1000,
         });
         this.tweens.add({
-            targets: cells.map(c => c.label),
+            targets: [lastChunk.minesLeftLabel],
             y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
             ease: 'Linear',
+            onComplete: () => lastChunk.minesLeftLabel.destroy(),
             duration: 1000,
         });
         this.tweens.add({
-            targets: [chunk.minesLeftLabel],
+            targets: lastChunkCells,
             y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
             ease: 'Linear',
+            onStart: () => lastChunkCells.forEach(c => c.disableInteractive()),
+            onComplete: () => {
+                lastChunk.destroy();
+                this.events.emit('chunk-cleared', chunkId+1);
+            },
             duration: 1000,
+        });
+        this.chunkList.forEach(chunk => {
+            const allCells = chunk.getAllCells();
+            this.tweens.add({
+                targets: allCells,
+                y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
+                ease: 'Linear',
+                onStart: () => allCells.forEach(c => c.disableInteractive()),
+                onComplete: () => allCells.forEach(c => c.setInteractive()),
+                duration: 1000,
+            });
+            this.tweens.add({
+                targets: allCells.map(c => c.label),
+                y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
+                ease: 'Linear',
+                duration: 1000,
+            });
+            this.tweens.add({
+                targets: [chunk.minesLeftLabel],
+                y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
+                ease: 'Linear',
+                duration: 1000,
+            });
         });
     }
 

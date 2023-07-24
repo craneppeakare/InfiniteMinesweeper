@@ -3,7 +3,7 @@ import Cell from './cell';
 
 export default class Chunk {
     static WIDTH = 10;
-    static HEIGHT = 6;
+    static HEIGHT = 6;  // Needs to be even because Cell coloring won't work properly
     static minesPerChunk = 5;
 
     private scene: Phaser.Scene;
@@ -15,6 +15,7 @@ export default class Chunk {
     nextChunk: Chunk;
     prevChunk: Chunk;
     minesLeftLabel: Phaser.GameObjects.Text;
+    isCleared = false;
 
     /**
     * Constructor for a Chunk
@@ -96,7 +97,6 @@ export default class Chunk {
                 const id = n.getId();
                 n.chunk.revealTile(id.x, id.y)});
         }
-        this.checkIfComplete();
     }
 
     /**
@@ -134,7 +134,6 @@ export default class Chunk {
                 .filter(n => !n.isFlagged)
                 .forEach(n => n.chunk.revealTile(n.getId().x, n.getId().y));
         }
-        this.checkIfComplete();
     }
 
     /**
@@ -177,14 +176,30 @@ export default class Chunk {
     }
 
     /**
+    * Destroy all Phaser gameobjects and clears this chunk from memory
+    *
+    * @returns void
+    */
+    destroy() {
+        this.minesLeftLabel.destroy();
+        this.cellData.forEach(row => {
+            row.forEach(cell => {
+                cell.label.destroy();
+                cell.destroy();
+            });
+        });
+    }
+
+    /**
      * Checks if the chunk has been fully cleared of mines and emits an event to the 
      * scene if it is.
      *
      * @returns void
      */
-    private checkIfComplete() {
+    checkIfComplete() {
         const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-Chunk.minesPerChunk;
         if (this.tilesRevealed >= tilesToReveal) {
+            this.isCleared = true;
             this.scene.events.emit('chunk-cleared', this.chunkId);
         }
     }
