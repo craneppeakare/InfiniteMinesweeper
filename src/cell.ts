@@ -64,7 +64,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             this.updateColor();
             if (this.minesNearby) {
                 this.label.setText(this.minesNearby.toString());
-                this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1])
+                this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1]);
             }
         }
     }
@@ -88,6 +88,20 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     */
     getId(): {x: number, y: number, chunkId: number} {
         return Object.create(this.id);
+    }
+
+
+    /**
+    * Increments this.minesNearby and updates the label
+    *
+    * @returns void
+    */
+    incrementMinesNearby() {
+        this.minesNearby += 1;
+        if (this.isRevealed) {
+            this.label.setText(this.minesNearby.toString());
+            this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1]);
+        }
     }
 
     /**

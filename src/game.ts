@@ -4,8 +4,9 @@ import Chunk from './chunk';
 import * as Config from './config';
 
 export default class InfiniteSweeper extends Phaser.Scene {
-    private NUMBER_OF_CHUNKS = 2;
+    private NUMBER_OF_CHUNKS = 3;
 
+    private firstClear = true;
     private chunksCleared = 0;
     private score: number;
 
@@ -42,7 +43,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
 
         for (let i = 0; i < this.NUMBER_OF_CHUNKS; i++) {
             // 32 + 384
-            const chunk = new Chunk(this, centerOffset, 416-(i*Cell.TILE_SIZE*Chunk.HEIGHT), i);
+            const chunk = new Chunk(this, centerOffset, 416-(i*Cell.TILE_SIZE*Chunk.HEIGHT)+64, i);
             this.chunkList.push(chunk);
             if (i != 0) {
                 chunk.prevChunk = this.chunkList[i-1];
@@ -50,11 +51,9 @@ export default class InfiniteSweeper extends Phaser.Scene {
             }
         }
 
-        this.game.events.addListener('mode-switch', () => {
-            this.flagMode = !this.flagMode;
-        });
+        this.game.events.addListener('mode-switch', () => this.flagMode = !this.flagMode);
         this.events.addListener('tile-pressed', (coords: {x: number, y: number, chunkId: number}) => this.onTilePressed(coords));
-        this.events.addListener('chunk-cleared', (chunkId: number) => this.chunkCleared(chunkId));
+        this.events.addListener('chunk-cleared', () => this.chunkCleared());
         this.events.addListener('gameover', () => this.onGameover());
     }
 
@@ -95,23 +94,25 @@ export default class InfiniteSweeper extends Phaser.Scene {
     *
     * @returns void
     */
-    private chunkCleared(chunkId: number) {
-        console.log("chunkid: " + chunkId + ", chunkscleared: " + this.chunksCleared);
-        if (this.chunkList[chunkId - this.chunksCleared].isCleared) {
-            // Spawn in a new chunk
-            const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
-            const chunk = new Chunk(this,
-                centerOffset,
-                (Cell.TILE_SIZE/2)-(Cell.TILE_SIZE*Chunk.HEIGHT),
-                this.chunksCleared+this.NUMBER_OF_CHUNKS);
-            chunk.prevChunk = this.chunkList[this.chunkList.length - 1];
-            this.chunkList[this.chunkList.length - 1].nextChunk = chunk;
-            chunk.spawnMines(-2, -2);
-            this.chunkList.push(chunk);
+    private chunkCleared() {
+        if (this.firstClear ? this.chunkList[0].isCleared : this.chunkList[1].isCleared) {
+            if (!this.firstClear) {
+                // Spawn in a new chunk
+                const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
+                const chunk = new Chunk(this,
+                    centerOffset,
+                    (Cell.TILE_SIZE/2)-(Cell.TILE_SIZE*Chunk.HEIGHT),
+                    this.chunksCleared+this.NUMBER_OF_CHUNKS);
+                chunk.prevChunk = this.chunkList[this.chunkList.length - 1];
+                this.chunkList[this.chunkList.length - 1].nextChunk = chunk;
+                chunk.spawnMines(-2, -2);
+                chunk.updateBottomRowCells();
+                this.chunkList.push(chunk);
+                this.chunksCleared++;
+            }
 
             // Scroll chunks down
-            this.scrollAllChunksDown(chunkId);
-            this.chunksCleared++;
+            this.scrollAllChunksDown();
         }
     }
 
@@ -120,7 +121,37 @@ export default class InfiniteSweeper extends Phaser.Scene {
     *
     * @returns void
     */
-    private scrollAllChunksDown(chunkId: number) {
+    private scrollAllChunksDown() {
+        if (this.firstClear) {
+            this.firstClear = false;
+            this.chunkList.forEach(chunk => {
+                const allCells = chunk.getAllCells();
+                this.tweens.add({
+                    targets: allCells,
+                    y: '+=' + (Chunk.HEIGHT-1)*Cell.TILE_SIZE,
+                    ease: 'Linear',
+                    onStart: () => allCells.forEach(c => c.disableInteractive()),
+                    onComplete: () => {
+                        allCells.forEach(c => c.setInteractive());
+                        this.events.emit('chunk-cleared');
+                    },
+                    duration: 1000,
+                });
+                this.tweens.add({
+                    targets: allCells.map(c => c.label),
+                    y: '+=' + (Chunk.HEIGHT-1)*Cell.TILE_SIZE,
+                    ease: 'Linear',
+                    duration: 1000,
+                });
+                this.tweens.add({
+                    targets: [chunk.minesLeftLabel],
+                    y: '+=' + (Chunk.HEIGHT-1)*Cell.TILE_SIZE,
+                    ease: 'Linear',
+                    duration: 1000,
+                });
+            });
+            return;
+        }
         const lastChunk = this.chunkList.shift();
         const lastChunkCells = lastChunk.getAllCells();
         this.tweens.add({
@@ -143,7 +174,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
             onStart: () => lastChunkCells.forEach(c => c.disableInteractive()),
             onComplete: () => {
                 lastChunk.destroy();
-                this.events.emit('chunk-cleared', chunkId+1);
+                this.events.emit('chunk-cleared');
             },
             duration: 1000,
         });

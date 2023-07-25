@@ -67,11 +67,12 @@ export default class Chunk {
                 mineY = Math.floor(Math.random() * Chunk.HEIGHT);
             } while (noMineCoords.some(c => c.x == mineX && c.y == mineY))
             this.cellData[mineY][mineX].isAMine = true;
+            this.cellData[mineY][mineX].incrementMinesNearby();
             noMineCoords.push({x: mineX, y: mineY});
 
             // Update the tiles nearby to see this mine
-            const neighbors = this.getUnrevealedNeighborTiles(mineX, mineY);
-            neighbors.forEach(n => n.minesNearby += 1);
+            const neighbors = this.getNeighborTiles(mineX, mineY, true);
+            neighbors.forEach(n => n.incrementMinesNearby());
         }
     }
 
@@ -85,14 +86,15 @@ export default class Chunk {
     * @returns void
     */
     revealTile(x: number, y: number) {
+        if (this.cellData[y][x].isAMine) console.trace();
         if (this.cellData[y][x].isRevealed) {
             this.chordTile(x, y);
         } else {
             this.cellData[y][x].reveal();
             this.tilesRevealed += 1;
         }
-        if (!this.cellData[y][x].minesNearby) {
-            const neighbors = this.getUnrevealedNeighborTiles(x, y);
+        if (this.cellData[y][x].minesNearby === 0) {
+            const neighbors = this.getNeighborTiles(x, y);
             neighbors.forEach(n => {
                 const id = n.getId();
                 n.chunk.revealTile(id.x, id.y)});
@@ -114,6 +116,9 @@ export default class Chunk {
                 ? this.minesToFlagLeft -= 1
                 : this.minesToFlagLeft += 1;
             this.minesLeftLabel.setText(this.minesToFlagLeft.toString());
+        } else {
+            this.chordTile(x, y);
+            this.checkIfComplete();
         }
     }
 
@@ -127,7 +132,8 @@ export default class Chunk {
     * @returns void
     */
     chordTile(x: number, y: number) {
-        const neighbors = this.getUnrevealedNeighborTiles(x, y);
+        if (this.cellData[y][x].minesNearby === 0) return;
+        const neighbors = this.getNeighborTiles(x, y);
         const flagged = neighbors.filter(n => n.isFlagged);
         if (flagged.length === this.cellData[y][x].minesNearby) {
             neighbors
@@ -144,11 +150,11 @@ export default class Chunk {
     *
     * @returns Cell[]
     */
-    getUnrevealedNeighborTiles(x: number, y: number) {
+    getNeighborTiles(x: number, y: number, includeRevealed = false) {
         let neighbors: Cell[] = [];
         for (let dy = y-1; dy <= y+1; dy++) {
             for (let dx = x-1; dx <= x+1; dx++) {
-                if (dx < 0 || dx >= Chunk.WIDTH ) continue;
+                if (dx < 0 || dx >= Chunk.WIDTH) continue;
                 let cell: Cell;
                 if (dy < 0) {
                     if (!this.nextChunk) continue;
@@ -160,7 +166,7 @@ export default class Chunk {
                     cell = this.cellData[dy][dx];
                 }
 
-                if (cell && !cell.isRevealed) neighbors.push(cell);
+                if (cell && (includeRevealed || !cell.isRevealed)) neighbors.push(cell);
             }
         }
         return neighbors;
@@ -176,7 +182,35 @@ export default class Chunk {
     }
 
     /**
-    * Destroy all Phaser gameobjects and clears this chunk from memory
+    * Updates the bottom row of tiles by checking for nearby mines in the previous chunk
+    *
+    * @returns void
+    */
+    updateBottomRowCells() {
+        this.cellData[this.cellData.length-1].forEach((cell, i) => {
+            for (let di = i-1; di <= i+1; di++) {
+                const otherCell = this.prevChunk.cellData[0][di];
+                if (otherCell && otherCell.isAMine) {
+                    cell.incrementMinesNearby();
+                }
+            }
+        });
+        this.cellData[this.cellData.length-1].forEach((cell, i) => {
+            for (let di = i-1; di <= i+1; di++) {
+                if (cell.isRevealed) continue;
+                const otherCell = this.prevChunk.cellData[0][di];
+                if (otherCell && otherCell.minesNearby === 0 && otherCell.isRevealed) {
+                    const id = cell.getId();
+                    this.revealTile(id.x, id.y);
+                    continue;
+                }
+            }
+        });
+    }
+
+    /**
+    * Destroy all Phaser gameobjects and clears this chunk from memory. Also disconnects
+    * the chunk allowing it to be garbage collected.
     *
     * @returns void
     */
@@ -188,6 +222,11 @@ export default class Chunk {
                 cell.destroy();
             });
         });
+        if (this.prevChunk) this.prevChunk.nextChunk = null;
+        if (this.nextChunk) this.nextChunk.prevChunk = null;
+        this.prevChunk = null;
+        this.nextChunk = null;
+
     }
 
     /**
@@ -200,7 +239,18 @@ export default class Chunk {
         const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-Chunk.minesPerChunk;
         if (this.tilesRevealed >= tilesToReveal) {
             this.isCleared = true;
-            this.scene.events.emit('chunk-cleared', this.chunkId);
+            this.cellData.forEach((row) => {
+                row.filter((cell) => {
+                    if (cell.isAMine) {
+                        if (!cell.isFlagged) {
+                            const id = cell.getId();
+                            this.flagTile(id.x, id.y);
+                        }
+                        cell.removeInteractive();
+                    }
+                });
+            });
+            this.scene.events.emit('chunk-cleared');
         }
     }
 }

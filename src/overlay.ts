@@ -33,7 +33,7 @@ export default class Overlay extends Phaser.Scene {
         console.log("hello world");
         this.gameObjects = [
             // Top bar
-            this.add.rectangle(0, 0, Config.GAME_WIDTH, 32, 0xffffff)
+            this.add.rectangle(0, 0, Config.GAME_WIDTH, 8, 0xffffff)
                 .setOrigin(0, 0),
             this.add.rectangle(0, 8, Config.GAME_WIDTH, 16, 0xc0c0c0)
                 .setOrigin(0, 0),
@@ -41,10 +41,10 @@ export default class Overlay extends Phaser.Scene {
                 .setOrigin(0, 0),
 
             // Bottom bar
-            this.add.rectangle(0, 800, Config.GAME_WIDTH, 10, 0xffffff)
+            this.add.rectangle(0, 864, Config.GAME_WIDTH, 10, 0xffffff)
                 .setOrigin(0, 0),
-            // this.add.rectangle(0, 810, Config.GAME_WIDTH, 260, 0xc0c0c0)
-            //     .setOrigin(0, 0),
+            this.add.rectangle(0, 874, Config.GAME_WIDTH, 196, 0xc0c0c0)
+                .setOrigin(0, 0),
             this.add.rectangle(0, 1070, Config.GAME_WIDTH, 10, 0x808080)
                 .setOrigin(0, 0),
             ];
