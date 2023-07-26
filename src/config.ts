@@ -7,7 +7,7 @@ export const GAME_HEIGHT = 1080;
 
 const config = {
     type: Phaser.AUTO,
-    backgroundColor: '#5498c4',
+    backgroundColor: '#c0c0c0',
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     scene: [InfiniteSweeper, GameOver, Overlay]

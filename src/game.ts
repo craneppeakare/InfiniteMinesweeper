@@ -8,7 +8,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
 
     private firstClear = true;
     private chunksCleared = 0;
-    private score: number;
+    private score = 0;
 
     flagMode = false;
     chunkList: Chunk[] = [];
@@ -51,10 +51,11 @@ export default class InfiniteSweeper extends Phaser.Scene {
             }
         }
 
-        this.game.events.addListener('mode-switch', () => this.flagMode = !this.flagMode);
         this.events.addListener('tile-pressed', (coords: {x: number, y: number, chunkId: number}) => this.onTilePressed(coords));
         this.events.addListener('chunk-cleared', () => this.chunkCleared());
         this.events.addListener('gameover', () => this.onGameover());
+        this.game.events.addListener('mode-switch', () => this.flagMode = !this.flagMode);
+        this.game.events.addListener('add-score', (score: number) => this.score += score);
     }
 
     /**
@@ -124,82 +125,23 @@ export default class InfiniteSweeper extends Phaser.Scene {
     private scrollAllChunksDown() {
         if (this.firstClear) {
             this.firstClear = false;
-            this.chunkList.forEach(chunk => {
-                const allCells = chunk.getAllCells();
-                this.tweens.add({
-                    targets: allCells,
-                    y: '+=' + (Chunk.HEIGHT-1)*Cell.TILE_SIZE,
-                    ease: 'Linear',
-                    onStart: () => allCells.forEach(c => c.disableInteractive()),
-                    onComplete: () => {
-                        allCells.forEach(c => c.setInteractive());
-                        this.events.emit('chunk-cleared');
-                    },
-                    duration: 1000,
-                });
-                this.tweens.add({
-                    targets: allCells.map(c => c.label),
-                    y: '+=' + (Chunk.HEIGHT-1)*Cell.TILE_SIZE,
-                    ease: 'Linear',
-                    duration: 1000,
-                });
-                this.tweens.add({
-                    targets: [chunk.minesLeftLabel],
-                    y: '+=' + (Chunk.HEIGHT-1)*Cell.TILE_SIZE,
-                    ease: 'Linear',
-                    duration: 1000,
-                });
+            const dy = (Cell.TILE_SIZE*Chunk.HEIGHT)-Cell.TILE_SIZE;
+            this.chunkList.forEach((chunk, i) => {
+                if (i === 0) {
+                    chunk.scrollChunkDown(dy, () => this.events.emit('chunk-cleared'))
+                } else {
+                    chunk.scrollChunkDown(dy)
+                }
             });
             return;
         }
-        const lastChunk = this.chunkList.shift();
-        const lastChunkCells = lastChunk.getAllCells();
-        this.tweens.add({
-            targets: lastChunkCells.map(c => c.label),
-            y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
-            ease: 'Linear',
-            duration: 1000,
-        });
-        this.tweens.add({
-            targets: [lastChunk.minesLeftLabel],
-            y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
-            ease: 'Linear',
-            onComplete: () => lastChunk.minesLeftLabel.destroy(),
-            duration: 1000,
-        });
-        this.tweens.add({
-            targets: lastChunkCells,
-            y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
-            ease: 'Linear',
-            onStart: () => lastChunkCells.forEach(c => c.disableInteractive()),
-            onComplete: () => {
-                lastChunk.destroy();
-                this.events.emit('chunk-cleared');
-            },
-            duration: 1000,
-        });
-        this.chunkList.forEach(chunk => {
-            const allCells = chunk.getAllCells();
-            this.tweens.add({
-                targets: allCells,
-                y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
-                ease: 'Linear',
-                onStart: () => allCells.forEach(c => c.disableInteractive()),
-                onComplete: () => allCells.forEach(c => c.setInteractive()),
-                duration: 1000,
-            });
-            this.tweens.add({
-                targets: allCells.map(c => c.label),
-                y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
-                ease: 'Linear',
-                duration: 1000,
-            });
-            this.tweens.add({
-                targets: [chunk.minesLeftLabel],
-                y: '+=' + Chunk.HEIGHT*Cell.TILE_SIZE,
-                ease: 'Linear',
-                duration: 1000,
-            });
+        const dy = (Cell.TILE_SIZE*Chunk.HEIGHT);
+        this.chunkList.forEach((chunk, i) => {
+            if (i === 0) {
+                chunk.scrollChunkDown(dy, () => this.chunkList.shift().destroy());
+            } else {
+                chunk.scrollChunkDown(dy);
+            }
         });
     }
 
@@ -210,6 +152,6 @@ export default class InfiniteSweeper extends Phaser.Scene {
     */
     private onGameover() {
         this.scene.pause();
-        this.scene.run('Gameover', {score: this.score});
+        this.scene.run('Gameover', {score: this.score, highscore: 0, maxDistance: (this.chunksCleared+this.NUMBER_OF_CHUNKS)*100});
     }
 }

@@ -4,17 +4,20 @@ import Cell from './cell';
 export default class Chunk {
     static WIDTH = 10;
     static HEIGHT = 6;  // Needs to be even because Cell coloring won't work properly
-    static minesPerChunk = 5;
 
     private scene: Phaser.Scene;
     private cellData: Cell[][] = [];
-    private minesToFlagLeft = Chunk.minesPerChunk;
+    private totalMines: number;
+    private minesToFlagLeft: number;
     private tilesRevealed = 0;
     private chunkId: number;
 
+    minesLeftLabel: Phaser.GameObjects.Text;
+    distancelabel: Phaser.GameObjects.Text;
+    chunkDecorationRects: Phaser.GameObjects.Rectangle[] = [];
+
     nextChunk: Chunk;
     prevChunk: Chunk;
-    minesLeftLabel: Phaser.GameObjects.Text;
     isCleared = false;
 
     /**
@@ -29,10 +32,42 @@ export default class Chunk {
     constructor(scene: Phaser.Scene, xPos: number, yPos: number, chunkId: number) {
         this.scene = scene;
         this.chunkId = chunkId;
-        const style = { fontFamily: 'Silkscreen', fontSize: '24px' };
-        this.minesLeftLabel = scene.add.text(xPos+(Cell.TILE_SIZE*Chunk.WIDTH), yPos, this.minesToFlagLeft.toString(), style)
+        const mineDensity = this.exponentialDiff(this.chunkId);
+        this.totalMines = Math.floor((Chunk.HEIGHT*Chunk.WIDTH)*mineDensity);
+        this.minesToFlagLeft = this.totalMines;
+        
+        // Create border indent on the sides
+        this.chunkDecorationRects.push(this.scene.add.rectangle(xPos, yPos, 8, Cell.TILE_SIZE*Chunk.HEIGHT, 0xffffff)
+            .setOrigin(1, 0));
+        this.chunkDecorationRects.push(this.scene.add.rectangle(xPos+(Cell.TILE_SIZE*Chunk.WIDTH), yPos, 8, Cell.TILE_SIZE*Chunk.HEIGHT, 0x808080)
+            .setOrigin(0, 0));
+
+        // Create the text labels on the sides
+        const style = { fontFamily: 'Silkscreen', fontSize: '22px', stroke: '#000000', strokeThickness: 0 };
+        this.minesLeftLabel = scene.add.text(xPos+(Cell.TILE_SIZE*Chunk.WIDTH)+15, yPos+5, this.minesToFlagLeft.toString(), style)
             .setOrigin(0, 0)
             .setColor('#aa0000');
+        this.distancelabel = scene.add.text(xPos-6, yPos, this.minesToFlagLeft.toString(), style)
+            .setText((this.chunkId+1)*100 + "m ")
+            .setAngle(270)
+            .setOrigin(1, 1)
+            .setColor('#aa0000');
+
+        // Create the ruler markers
+        const numberOfRulerMarkers = 8
+        this.chunkDecorationRects.push(this.scene.add.rectangle(0, yPos, 20, 4, 0xaa0000)
+            .setOrigin(0, 0));
+        this.chunkDecorationRects.push(this.scene.add.rectangle(720, yPos, 20, 4, 0xaa0000)
+            .setOrigin(1, 0));
+        const dist = (Cell.TILE_SIZE*Chunk.HEIGHT)/numberOfRulerMarkers;
+        for (let i = 1; i < numberOfRulerMarkers; i++) {
+            const markerLength = i % 2 ? 10 : 14;
+            this.chunkDecorationRects.push(
+                this.scene.add.rectangle(0, yPos+(dist*i), markerLength, 2, 0xaa0000)
+                    .setOrigin(0,0));
+        }
+
+        // Create all the necessary Cells
         for (let y = 0; y < Chunk.HEIGHT; y++) {
             this.cellData.push([]);
             for (let x = 0; x < Chunk.WIDTH; x++) {
@@ -45,7 +80,7 @@ export default class Chunk {
     }
 
     /**
-    * Chooses this.minesPerChunk number of tiles to become mines
+    * Chooses tiles to become mines. Avoid placing mines around the specified coordinate.
     *
     * @param x - The x coordinate of the Cell not to turn into a mine
     * @param y - The y coordinate of the Cell not to turn into a mine
@@ -60,7 +95,7 @@ export default class Chunk {
                 noMineCoords.push({x: dx, y: dy});
             }
         }
-        for (let i = 0; i < Chunk.minesPerChunk; i++) {
+        for (let i = 0; i < this.totalMines; i++) {
             // Choose random coords (mineX, mineY) to turn into a mine
             do {
                 mineX = Math.floor(Math.random() * Chunk.WIDTH);
@@ -86,7 +121,6 @@ export default class Chunk {
     * @returns void
     */
     revealTile(x: number, y: number) {
-        if (this.cellData[y][x].isAMine) console.trace();
         if (this.cellData[y][x].isRevealed) {
             this.chordTile(x, y);
         } else {
@@ -209,6 +243,33 @@ export default class Chunk {
     }
 
     /**
+    * Scrolls the entire chunk down; including all labels and markers.
+    *
+    * @param y - distance in units to move the Chunk by
+    * @param callback - function to call after moving animation finishes
+    *
+    * @returns void
+    */
+    scrollChunkDown(dy: number, callback: Function = null) {
+        const allCells = this.cellData.flat();
+        this.scene.tweens.add({
+            targets: [this.cellData.flat(),
+                      allCells.map(cell => cell.label),
+                      this.minesLeftLabel,
+                      this.distancelabel,
+                      this.chunkDecorationRects].flat(),
+            y: '+=' + dy,
+            ease: 'Linear',
+            onStart: () => allCells.forEach(cell => cell.disableInteractive()),
+            onComplete: () => {
+                allCells.forEach(cell => cell.setInteractive());
+                if (callback) callback();
+            },
+            duration: 1225,
+        });
+    }
+
+    /**
     * Destroy all Phaser gameobjects and clears this chunk from memory. Also disconnects
     * the chunk allowing it to be garbage collected.
     *
@@ -236,7 +297,7 @@ export default class Chunk {
      * @returns void
      */
     checkIfComplete() {
-        const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-Chunk.minesPerChunk;
+        const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-this.totalMines;
         if (this.tilesRevealed >= tilesToReveal) {
             this.isCleared = true;
             this.cellData.forEach((row) => {
@@ -252,5 +313,18 @@ export default class Chunk {
             });
             this.scene.events.emit('chunk-cleared');
         }
+    }
+
+    /**
+     * Modified sigmoid function that returns the difficulty rating of the chunk based on given number x.
+     * The higher x is the more difficult, thus higher return value.
+     *
+     * @param x is a number
+     *
+     * @returns number from 0.1 to 0.5 representing mine density.
+     */
+    private exponentialDiff(x: number): number {
+        x = x/60;  // 60 means it should hit max mine density after 60 chunks
+        return Math.min(0.5, Math.pow(x, 2) + 0.1);
     }
 }

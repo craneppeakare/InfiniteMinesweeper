@@ -14,9 +14,18 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
                                   '#800000',
                                   '#008080',
                                   '#808080'];
+    private static TILE_POINTS = [0,
+                                 10,
+                                 80,
+                                 270,
+                                 640,
+                                 1250,
+                                 2160,
+                                 3430,
+                                 5120]
 
     private id: {x: number, y: number, chunkId: number};
-    private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px' };
+    private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px', stroke: '#000000', strokeThickness: 0 };
 
     chunk: Chunk;
     isAMine = false;
@@ -62,6 +71,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             this.scene.events.emit('gameover');
         } else {
             this.updateColor();
+            this.scene.game.events.emit('add-score', Cell.TILE_POINTS[this.minesNearby]);
             if (this.minesNearby) {
                 this.label.setText(this.minesNearby.toString());
                 this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1]);

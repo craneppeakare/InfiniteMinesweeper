@@ -2,9 +2,11 @@ import * as Phaser from 'phaser';
 import * as Config from './config';
 
 export default class Overlay extends Phaser.Scene {
-    
-    gameObjects: Phaser.GameObjects.Rectangle[];
-    modeSwitchButton: Phaser.GameObjects.Rectangle;
+    private score = 0;
+
+    private gameObjects: Phaser.GameObjects.Rectangle[];
+    private modeSwitchButton: Phaser.GameObjects.Rectangle;
+    private scoreLabel: Phaser.GameObjects.Text;
 
     /**
     * Constructor for the main Scene
@@ -30,7 +32,6 @@ export default class Overlay extends Phaser.Scene {
     * @returns void
     */
     create () {
-        console.log("hello world");
         this.gameObjects = [
             // Top bar
             this.add.rectangle(0, 0, Config.GAME_WIDTH, 8, 0xffffff)
@@ -47,8 +48,15 @@ export default class Overlay extends Phaser.Scene {
                 .setOrigin(0, 0),
             this.add.rectangle(0, 1070, Config.GAME_WIDTH, 10, 0x808080)
                 .setOrigin(0, 0),
+
+            // Drawing screen for score
+            this.add.rectangle(20, 900, 270, 144, 0x404040)
+                .setOrigin(0, 0),
             ];
 
+        const style = { fontFamily: 'Silkscreen', fontSize: '18px' };
+        this.scoreLabel = this.add.text(35, 915, 'Score: ' + this.score, style)
+            .setOrigin(0, 0);
 
         this.modeSwitchButton = this.add.rectangle(Config.GAME_WIDTH/2, 940, 96, 96, 0x00ff00)
             .setOrigin(0.5, 0.5)
@@ -62,5 +70,11 @@ export default class Overlay extends Phaser.Scene {
                 }
             });
 
+        this.game.events.addListener('add-score', (score: number) => this.updateScore(score));
+    }
+
+    updateScore(scoreToAdd: number) {
+        this.score += scoreToAdd;
+        this.scoreLabel.setText('Score: ' + this.score);
     }
 }

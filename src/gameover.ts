@@ -3,6 +3,8 @@ import * as Config from './config';
 
 export default class GameOver extends Phaser.Scene {
     private score: number;
+    private highscore: number;
+    private maxDistance: number;
 
     /**
     * Constructor for the main Scene
@@ -20,6 +22,8 @@ export default class GameOver extends Phaser.Scene {
     */
     init (data: any) {
         this.score = data.score;
+        this.highscore = data.highscore;
+        this.maxDistance = data.maxDistance;
         console.log("Your final score is: " + this.score);
     }
 
@@ -37,8 +41,10 @@ export default class GameOver extends Phaser.Scene {
     * @returns void
     */
     create () {
-        this.add.text(Config.GAME_WIDTH/2, Config.GAME_HEIGHT/2, "GAME OVER\n\nSCORE: " + this.score)
-            .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px' })
+        const gameoverString = `GAME OVER\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
+        // const gameoverString = `I LOVE YOU CJ\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
+        this.add.text(Config.GAME_WIDTH/2, Config.GAME_HEIGHT/2, gameoverString)
+            .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px', align: 'center', stroke: '#000000', strokeThickness: 5 })
             .setOrigin(0.5, 0.5);
         this.scene.pause();
     }
