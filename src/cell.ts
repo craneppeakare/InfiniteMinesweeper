@@ -26,6 +26,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
 
     private id: {x: number, y: number, chunkId: number};
     private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px', stroke: '#000000', strokeThickness: 0 };
+    private flagImage: Phaser.GameObjects.Image;
 
     chunk: Chunk;
     isAMine = false;
@@ -55,6 +56,8 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         scene.add.existing(this);
         this.label = this.scene.add.text(this.getCenter().x, this.getCenter().y, '', this.labelStyle)
             .setOrigin(0.5, 0.5);
+        this.flagImage = this.scene.add.image(this.getCenter().x, this.getCenter().y, 'flagImage')
+            .setVisible(false);
         this.updateColor();
     }
 
@@ -67,7 +70,8 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         if (this.isFlagged || this.isRevealed) return;
         this.isRevealed = true;
         if (this.isAMine) {
-            this.fillColor = 0xff0000;
+            this.fillColor = 0xaa0000;
+            this.scene.add.image(this.getCenter().x, this.getCenter().y, 'mineImage');
             this.scene.events.emit('gameover');
         } else {
             this.updateColor();
@@ -87,8 +91,10 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     flag() {
         this.isFlagged = !this.isFlagged;
         if (this.isFlagged) {
-            this.fillColor = 0xff00ff;
+            // this.fillColor = 0xff00ff;
+            this.flagImage.setVisible(true);
         } else {
+            this.flagImage.setVisible(false);
             this.updateColor();
         }
     }
@@ -112,6 +118,24 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             this.label.setText(this.minesNearby.toString());
             this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1]);
         }
+    }
+
+    /**
+    * Scrolls the cell down the screen
+    *
+    * @param by - distance in units to move the Cell by
+    *
+    * @returns void
+    */
+    scrollCellDown(dy: number) {
+        this.scene.tweens.add({
+            targets: [this, this.label, this.flagImage],
+            y: '+=' + dy,
+            ease: 'Linear',
+            onStart: () => this.disableInteractive(),
+            onComplete: () => this.setInteractive(),
+            duration: 1225,
+        });
     }
 
     /**

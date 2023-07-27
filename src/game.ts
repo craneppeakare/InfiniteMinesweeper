@@ -30,7 +30,9 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     preload () {
-        // this.load.image('revealparticle', 'assets/revealParticle.png');
+        this.load.image('mineImage', 'assets/mine.png');
+        this.load.image('flagImage', 'assets/flag.png');
+        this.load.image('shovelImage', 'assets/shovel.png');
     }
 
     /**
@@ -102,7 +104,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
                 const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
                 const chunk = new Chunk(this,
                     centerOffset,
-                    (Cell.TILE_SIZE/2)-(Cell.TILE_SIZE*Chunk.HEIGHT),
+                    (Cell.TILE_SIZE/2)-(Cell.TILE_SIZE*Chunk.HEIGHT)-Cell.TILE_SIZE,
                     this.chunksCleared+this.NUMBER_OF_CHUNKS);
                 chunk.prevChunk = this.chunkList[this.chunkList.length - 1];
                 this.chunkList[this.chunkList.length - 1].nextChunk = chunk;
@@ -125,7 +127,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
     private scrollAllChunksDown() {
         if (this.firstClear) {
             this.firstClear = false;
-            const dy = (Cell.TILE_SIZE*Chunk.HEIGHT)-Cell.TILE_SIZE;
+            const dy = (Cell.TILE_SIZE*Chunk.HEIGHT)-(2*Cell.TILE_SIZE);
             this.chunkList.forEach((chunk, i) => {
                 if (i === 0) {
                     chunk.scrollChunkDown(dy, () => this.events.emit('chunk-cleared'))
@@ -151,6 +153,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     private onGameover() {
+        this.chunkList.forEach(cl => cl.revealAllMines());
         this.scene.pause();
         this.scene.run('Gameover', {score: this.score, highscore: 0, maxDistance: (this.chunksCleared+this.NUMBER_OF_CHUNKS)*100});
     }

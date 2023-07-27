@@ -41,8 +41,8 @@ export default class GameOver extends Phaser.Scene {
     * @returns void
     */
     create () {
-        const gameoverString = `GAME OVER\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
-        // const gameoverString = `I LOVE YOU CJ\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
+        // const gameoverString = `GAME OVER\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
+        const gameoverString = `I LOVE YOU CJ\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
         this.add.text(Config.GAME_WIDTH/2, Config.GAME_HEIGHT/2, gameoverString)
             .setStyle({ fontFamily: 'Silkscreen', fontSize: '64px', align: 'center', stroke: '#000000', strokeThickness: 5 })
             .setOrigin(0.5, 0.5);

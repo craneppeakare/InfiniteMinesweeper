@@ -7,6 +7,10 @@ export default class Overlay extends Phaser.Scene {
     private gameObjects: Phaser.GameObjects.Rectangle[];
     private modeSwitchButton: Phaser.GameObjects.Rectangle;
     private scoreLabel: Phaser.GameObjects.Text;
+    private flagMode = false;
+
+    private flagImage: Phaser.GameObjects.Image;
+    private shovelImage: Phaser.GameObjects.Image;
 
     /**
     * Constructor for the main Scene
@@ -23,7 +27,9 @@ export default class Overlay extends Phaser.Scene {
     * @returns void
     */
     preload () {
-        // this.load.image('revealparticle', 'assets/revealParticle.png');
+        this.load.image('mineImage', 'assets/mine.png');
+        this.load.image('flagImage', 'assets/flag.png');
+        this.load.image('shovelImage', 'assets/shovel.png');
     }
 
     /**
@@ -58,17 +64,23 @@ export default class Overlay extends Phaser.Scene {
         this.scoreLabel = this.add.text(35, 915, 'Score: ' + this.score, style)
             .setOrigin(0, 0);
 
-        this.modeSwitchButton = this.add.rectangle(Config.GAME_WIDTH/2, 940, 96, 96, 0x00ff00)
+        this.modeSwitchButton = this.add.rectangle(Config.GAME_WIDTH/2, 940, 86, 86, 0xffffff)
             .setOrigin(0.5, 0.5)
             .setInteractive()
             .on('pointerup', () => {
                 this.game.events.emit('mode-switch')
-                if (this.modeSwitchButton.fillColor === 0xff00ff) {
-                    this.modeSwitchButton.fillColor = 0x00ff00;
+                this.flagMode = !this.flagMode;
+                if (this.flagMode) {
+                    this.flagImage.setVisible(true);
+                    this.shovelImage.setVisible(false);
                 } else {
-                    this.modeSwitchButton.fillColor = 0xff00ff;
+                    this.flagImage.setVisible(false);
+                    this.shovelImage.setVisible(true);
                 }
             });
+        this.flagImage = this.add.image(Config.GAME_WIDTH/2, 940, 'flagImage')
+            .setVisible(false);
+        this.shovelImage = this.add.image(Config.GAME_WIDTH/2, 940, 'shovelImage');
 
         this.game.events.addListener('add-score', (score: number) => this.updateScore(score));
     }

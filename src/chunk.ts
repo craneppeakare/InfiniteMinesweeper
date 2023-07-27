@@ -15,6 +15,7 @@ export default class Chunk {
     minesLeftLabel: Phaser.GameObjects.Text;
     distancelabel: Phaser.GameObjects.Text;
     chunkDecorationRects: Phaser.GameObjects.Rectangle[] = [];
+    bombLabelImage: Phaser.GameObjects.Image;
 
     nextChunk: Chunk;
     prevChunk: Chunk;
@@ -43,10 +44,16 @@ export default class Chunk {
             .setOrigin(0, 0));
 
         // Create the text labels on the sides
-        const style = { fontFamily: 'Silkscreen', fontSize: '22px', stroke: '#000000', strokeThickness: 0 };
-        this.minesLeftLabel = scene.add.text(xPos+(Cell.TILE_SIZE*Chunk.WIDTH)+15, yPos+5, this.minesToFlagLeft.toString(), style)
-            .setOrigin(0, 0)
-            .setColor('#aa0000');
+        this.bombLabelImage = scene.add.image(xPos+(Cell.TILE_SIZE*Chunk.WIDTH)+10, yPos+10, 'mineImage')
+            .setScale(0.25, 0.25)
+            .setOrigin(0, 0);
+        const style = { fontFamily: 'Silkscreen', fontSize: '20px' };
+        this.minesLeftLabel = scene.add.text(xPos+(Cell.TILE_SIZE*Chunk.WIDTH)+32,
+            yPos+15,
+            this.minesToFlagLeft.toString(),
+            {...style, stroke: '#ffffff', strokeThickness: 0})
+                .setOrigin(0.5, 0.5)
+                .setColor('#aa0000');
         this.distancelabel = scene.add.text(xPos-6, yPos, this.minesToFlagLeft.toString(), style)
             .setText((this.chunkId+1)*100 + "m ")
             .setAngle(270)
@@ -243,6 +250,19 @@ export default class Chunk {
     }
 
     /**
+    * Reveals all mines in the chunk.
+    *
+    * @returns void
+    */
+    revealAllMines() {
+        this.cellData.forEach(row => {
+            row.forEach(cell => {
+                if (cell.isAMine) cell.reveal();
+            })
+        });
+    }
+
+    /**
     * Scrolls the entire chunk down; including all labels and markers.
     *
     * @param y - distance in units to move the Chunk by
@@ -252,19 +272,15 @@ export default class Chunk {
     */
     scrollChunkDown(dy: number, callback: Function = null) {
         const allCells = this.cellData.flat();
+        allCells.forEach(cell => cell.scrollCellDown(dy));
         this.scene.tweens.add({
-            targets: [this.cellData.flat(),
-                      allCells.map(cell => cell.label),
-                      this.minesLeftLabel,
+            targets: [this.minesLeftLabel,
                       this.distancelabel,
+                      this.bombLabelImage,
                       this.chunkDecorationRects].flat(),
             y: '+=' + dy,
             ease: 'Linear',
-            onStart: () => allCells.forEach(cell => cell.disableInteractive()),
-            onComplete: () => {
-                allCells.forEach(cell => cell.setInteractive());
-                if (callback) callback();
-            },
+            onComplete: () => {if (callback) callback()},
             duration: 1225,
         });
     }
