@@ -55,7 +55,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
 
         this.events.addListener('tile-pressed', (coords: {x: number, y: number, chunkId: number}) => this.onTilePressed(coords));
         this.events.addListener('chunk-cleared', () => this.chunkCleared());
-        this.events.addListener('gameover', () => this.onGameover());
+        this.events.once('gameover', () => this.onGameover());
         this.game.events.addListener('mode-switch', () => this.flagMode = !this.flagMode);
         this.game.events.addListener('add-score', (score: number) => this.score += score);
     }

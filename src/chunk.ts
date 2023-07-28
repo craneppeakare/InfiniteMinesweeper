@@ -15,6 +15,7 @@ export default class Chunk {
     minesLeftLabel: Phaser.GameObjects.Text;
     distancelabel: Phaser.GameObjects.Text;
     chunkDecorationRects: Phaser.GameObjects.Rectangle[] = [];
+    chunkIndicatorRects: Phaser.GameObjects.Rectangle[] = []
     bombLabelImage: Phaser.GameObjects.Image;
 
     nextChunk: Chunk;
@@ -84,6 +85,12 @@ export default class Chunk {
                 this.cellData[y].push(cell);
             }
         }
+
+        // Create chunk outline indicator
+        this.chunkIndicatorRects.push(
+            this.scene.add.rectangle(xPos, yPos, Cell.TILE_SIZE*Chunk.WIDTH, 1, 0xaaaa00, 200).setOrigin(0, 0),
+            this.scene.add.rectangle(xPos, yPos+(Cell.TILE_SIZE*Chunk.HEIGHT)-1, Cell.TILE_SIZE*Chunk.WIDTH, 1, 0xaaaa00, 100).setOrigin(0, 0),
+        )
     }
 
     /**
@@ -188,6 +195,7 @@ export default class Chunk {
     *
     * @param x - The x coordinate of the center Cell
     * @param y - The y coordinate of the center Cell
+    * @param includeRevealed - Will also return already revealed Cells if true
     *
     * @returns Cell[]
     */
@@ -277,7 +285,8 @@ export default class Chunk {
             targets: [this.minesLeftLabel,
                       this.distancelabel,
                       this.bombLabelImage,
-                      this.chunkDecorationRects].flat(),
+                      this.chunkDecorationRects,
+                      this.chunkIndicatorRects].flat(),
             y: '+=' + dy,
             ease: 'Linear',
             onComplete: () => {if (callback) callback()},
@@ -316,6 +325,8 @@ export default class Chunk {
         const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-this.totalMines;
         if (this.tilesRevealed >= tilesToReveal) {
             this.isCleared = true;
+            this.chunkIndicatorRects[0].setSize(Chunk.WIDTH*Cell.TILE_SIZE, Chunk.HEIGHT*Cell.TILE_SIZE-1);
+            // TODO refactor to flagAllTiles method
             this.cellData.forEach((row) => {
                 row.filter((cell) => {
                     if (cell.isAMine) {

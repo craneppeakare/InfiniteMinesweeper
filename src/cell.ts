@@ -27,6 +27,8 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     private id: {x: number, y: number, chunkId: number};
     private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px', stroke: '#000000', strokeThickness: 0 };
     private flagImage: Phaser.GameObjects.Image;
+    private clickHighlight: Phaser.GameObjects.Rectangle;
+    private bevelPolygons: Phaser.GameObjects.Polygon[];
 
     chunk: Chunk;
     isAMine = false;
@@ -56,9 +58,31 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         scene.add.existing(this);
         this.label = this.scene.add.text(this.getCenter().x, this.getCenter().y, '', this.labelStyle)
             .setOrigin(0.5, 0.5);
+        this.clickHighlight = this.scene.add.rectangle(pos.x, pos.y, 64, 64, 0xffffff, 150)
+            .setOrigin(0, 0)
+            .setVisible(false);
         this.flagImage = this.scene.add.image(this.getCenter().x, this.getCenter().y, 'flagImage')
             .setVisible(false);
         this.updateColor();
+
+        this.on('pointerdown', () => {
+            this.clickHighlight.setVisible(true)
+            if (this.isRevealed && this.minesNearby) {
+                chunk.getNeighborTiles(id.x, id.y).forEach(cell => {
+                    cell.clickHighlight.setVisible(true);
+                });
+            }
+        });
+        const disableHighlight = () => {
+            this.clickHighlight.setVisible(false)
+            if (this.isRevealed && this.minesNearby) {
+                chunk.getNeighborTiles(id.x, id.y).forEach(cell => {
+                    cell.clickHighlight.setVisible(false);
+                });
+            }
+        }
+        this.on('pointerout', disableHighlight);
+        this.on('pointerup', disableHighlight);
     }
 
     /**
@@ -69,12 +93,12 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     reveal() {
         if (this.isFlagged || this.isRevealed) return;
         this.isRevealed = true;
+        this.clickHighlight.setVisible(false);
+        this.updateColor();
         if (this.isAMine) {
-            this.fillColor = 0xaa0000;
             this.scene.add.image(this.getCenter().x, this.getCenter().y, 'mineImage');
             this.scene.events.emit('gameover');
         } else {
-            this.updateColor();
             this.scene.game.events.emit('add-score', Cell.TILE_POINTS[this.minesNearby]);
             if (this.minesNearby) {
                 this.label.setText(this.minesNearby.toString());
@@ -91,11 +115,9 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     flag() {
         this.isFlagged = !this.isFlagged;
         if (this.isFlagged) {
-            // this.fillColor = 0xff00ff;
             this.flagImage.setVisible(true);
         } else {
             this.flagImage.setVisible(false);
-            this.updateColor();
         }
     }
 
@@ -129,7 +151,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     */
     scrollCellDown(dy: number) {
         this.scene.tweens.add({
-            targets: [this, this.label, this.flagImage],
+            targets: [this, this.label, this.flagImage, this.bevelPolygons, this.clickHighlight].flat(),
             y: '+=' + dy,
             ease: 'Linear',
             onStart: () => this.disableInteractive(),
@@ -153,10 +175,27 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
      * @returns void
      */
     private updateColor() {
+        const isEvenCell = (this.id.x+this.id.y) % 2;
         if (this.isRevealed) {
-            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.REVEALED_EVEN_COLOR : Cell.REVEALED_ODD_COLOR;
+            this.bevelPolygons.forEach(p => p.destroy());
+            this.bevelPolygons = [];
+            if (this.isAMine)
+                this.fillColor = isEvenCell ? 0xaa0000 : 0x880000;
+            else
+                this.fillColor = isEvenCell ? Cell.REVEALED_EVEN_COLOR : Cell.REVEALED_ODD_COLOR;
         } else {
-            this.fillColor = (this.id.x+this.id.y)%2 ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR;
+            this.fillColor = isEvenCell ? Cell.COVER_EVEN_COLOR : Cell.COVER_ODD_COLOR;
+            const x = this.getTopLeft().x;
+            const y = this.getTopLeft().y;
+            isEvenCell
+                ? this.bevelPolygons = [
+                    this.scene.add.polygon(x, y, "0 0 64 0 60 4 4 4 4 60 0 64", 0x4ec16d).setOrigin(0, 0),
+                    this.scene.add.polygon(x, y, "0 64 4 60 60 60 60 4 64 0 64 64", 0x3a814d).setOrigin(0, 0),
+                    ]
+                : this.bevelPolygons = [
+                    this.scene.add.polygon(x, y, "0 0 64 0 60 4 4 4 4 60 0 64", 0x41b65b).setOrigin(0, 0),
+                    this.scene.add.polygon(x, y, "0 64 4 60 60 60 60 4 64 0 64 64", 0x2a7a3f).setOrigin(0, 0),
+                    ];
         }
     }
 }

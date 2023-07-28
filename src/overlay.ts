@@ -4,7 +4,7 @@ import * as Config from './config';
 export default class Overlay extends Phaser.Scene {
     private score = 0;
 
-    private gameObjects: Phaser.GameObjects.Rectangle[];
+    private gameObjects: Phaser.GameObjects.Shape[];
     private modeSwitchButton: Phaser.GameObjects.Rectangle;
     private scoreLabel: Phaser.GameObjects.Text;
     private flagMode = false;
@@ -48,15 +48,19 @@ export default class Overlay extends Phaser.Scene {
                 .setOrigin(0, 0),
 
             // Bottom bar
-            this.add.rectangle(0, 864, Config.GAME_WIDTH, 10, 0xffffff)
+            this.add.rectangle(0, 864, Config.GAME_WIDTH, 8, 0xffffff)
                 .setOrigin(0, 0),
-            this.add.rectangle(0, 874, Config.GAME_WIDTH, 196, 0xc0c0c0)
+            this.add.rectangle(0, 872, Config.GAME_WIDTH, 200, 0xc0c0c0)
                 .setOrigin(0, 0),
-            this.add.rectangle(0, 1070, Config.GAME_WIDTH, 10, 0x808080)
+            this.add.rectangle(0, 1072, Config.GAME_WIDTH, 8, 0x808080)
                 .setOrigin(0, 0),
 
             // Drawing screen for score
             this.add.rectangle(20, 900, 270, 144, 0x404040)
+                .setOrigin(0, 0),
+            this.add.polygon(20, 900, "0 0 270 0 262 8 8 8 8 136 0 144", 0x808080)
+                .setOrigin(0, 0),
+            this.add.polygon(20, 900, "0 144 8 136 262 136 262 8 270 0 270 144", 0xffffff)
                 .setOrigin(0, 0),
             ];
 
@@ -64,12 +68,16 @@ export default class Overlay extends Phaser.Scene {
         this.scoreLabel = this.add.text(35, 915, 'Score: ' + this.score, style)
             .setOrigin(0, 0);
 
-        this.modeSwitchButton = this.add.rectangle(Config.GAME_WIDTH/2, 940, 86, 86, 0xffffff)
+        this.modeSwitchButton = this.add.rectangle(Config.GAME_WIDTH/2, 940, 86, 86, 0xc0c0c0)
             .setOrigin(0.5, 0.5)
             .setInteractive()
+            .on('pointerdown', () => {
+                this.modeSwitchButton.fillColor = 0xa0a0a0;
+            })
             .on('pointerup', () => {
                 this.game.events.emit('mode-switch')
                 this.flagMode = !this.flagMode;
+                this.modeSwitchButton.fillColor = 0xc0c0c0;
                 if (this.flagMode) {
                     this.flagImage.setVisible(true);
                     this.shovelImage.setVisible(false);
@@ -81,6 +89,14 @@ export default class Overlay extends Phaser.Scene {
         this.flagImage = this.add.image(Config.GAME_WIDTH/2, 940, 'flagImage')
             .setVisible(false);
         this.shovelImage = this.add.image(Config.GAME_WIDTH/2, 940, 'shovelImage');
+
+        const modeSwitchPos = this.modeSwitchButton.getTopLeft();
+        this.gameObjects.push(
+            this.add.polygon(modeSwitchPos.x, modeSwitchPos.y, "0 0 86 0 78 8 8 8 8 78 0 86", 0xffffff).setOrigin(0, 0)
+        );
+        this.gameObjects.push(
+            this.add.polygon(modeSwitchPos.x, modeSwitchPos.y, "86 0 78 8 78 78 8 78 0 86 86 86", 0x808080).setOrigin(0, 0)
+        );
 
         this.game.events.addListener('add-score', (score: number) => this.updateScore(score));
     }
