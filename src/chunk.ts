@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import * as Config from './config';
 import Cell from './cell';
 
 export default class Chunk {
@@ -48,14 +49,13 @@ export default class Chunk {
         this.bombLabelImage = scene.add.image(xPos+(Cell.TILE_SIZE*Chunk.WIDTH)+10, yPos+10, 'mineImage')
             .setScale(0.25, 0.25)
             .setOrigin(0, 0);
-        const style = { fontFamily: 'Silkscreen', fontSize: '20px' };
         this.minesLeftLabel = scene.add.text(xPos+(Cell.TILE_SIZE*Chunk.WIDTH)+32,
             yPos+15,
             this.minesToFlagLeft.toString(),
-            {...style, stroke: '#ffffff', strokeThickness: 0})
+            Config.defaultStyle)
                 .setOrigin(0.5, 0.5)
                 .setColor('#aa0000');
-        this.distancelabel = scene.add.text(xPos-6, yPos, this.minesToFlagLeft.toString(), style)
+        this.distancelabel = scene.add.text(xPos-6, yPos, this.minesToFlagLeft.toString(), Config.defaultStyle)
             .setText((this.chunkId+1)*100 + "m ")
             .setAngle(270)
             .setOrigin(1, 1)
@@ -88,8 +88,8 @@ export default class Chunk {
 
         // Create chunk outline indicator
         this.chunkIndicatorRects.push(
-            this.scene.add.rectangle(xPos, yPos, Cell.TILE_SIZE*Chunk.WIDTH, 1, 0xaaaa00, 200).setOrigin(0, 0),
-            this.scene.add.rectangle(xPos, yPos+(Cell.TILE_SIZE*Chunk.HEIGHT)-1, Cell.TILE_SIZE*Chunk.WIDTH, 1, 0xaaaa00, 100).setOrigin(0, 0),
+            this.scene.add.rectangle(xPos, yPos, Cell.TILE_SIZE*Chunk.WIDTH, 0, 0xaaaa00, 200).setOrigin(0, 0),
+            this.scene.add.rectangle(xPos, yPos+(Cell.TILE_SIZE*Chunk.HEIGHT)-1, Cell.TILE_SIZE*Chunk.WIDTH, 3, 0xaaaa00).setOrigin(0, 0),
         )
     }
 
@@ -132,20 +132,25 @@ export default class Chunk {
     * @param x - The x coordinate of the Cell to be revealed
     * @param y - The y coordinate of the Cell to be revealed
     *
-    * @returns void
+    * @returns number for how many points earned
     */
-    revealTile(x: number, y: number) {
+    revealTile(x: number, y: number): number {
         if (this.cellData[y][x].isRevealed) {
-            this.chordTile(x, y);
+            if (this.cellData[y][x].minesNearby > 0)
+                return this.chordTile(x, y);
+            return 0;
         } else {
-            this.cellData[y][x].reveal();
+            let points = this.cellData[y][x].reveal();
             this.tilesRevealed += 1;
-        }
-        if (this.cellData[y][x].minesNearby === 0) {
-            const neighbors = this.getNeighborTiles(x, y);
-            neighbors.forEach(n => {
-                const id = n.getId();
-                n.chunk.revealTile(id.x, id.y)});
+            if (this.cellData[y][x].minesNearby === 0) {
+                const neighbors = this.getNeighborTiles(x, y);
+                points += neighbors.reduce((acc: number, n: Cell) => {
+                    const id = n.getId();
+                    const p = n.chunk.revealTile(id.x, id.y);
+                    return acc + p;
+                }, 0);
+            }
+            return points;
         }
     }
 
@@ -155,18 +160,20 @@ export default class Chunk {
     * @param x - The x coordinate of the Cell to be flagged
     * @param y - The y coordinate of the Cell to be flagged
     *
-    * @returns void
+    * @returns number for how many points earned
     */
-    flagTile(x: number, y: number) {
+    flagTile(x: number, y: number): number {
         if (!this.cellData[y][x].isRevealed) {
             this.cellData[y][x].flag();
             this.cellData[y][x].isFlagged
                 ? this.minesToFlagLeft -= 1
                 : this.minesToFlagLeft += 1;
             this.minesLeftLabel.setText(this.minesToFlagLeft.toString());
+            return 0;
         } else {
-            this.chordTile(x, y);
+            const points = this.chordTile(x, y);
             this.checkIfComplete();
+            return points;
         }
     }
 
@@ -177,17 +184,20 @@ export default class Chunk {
     * @param x - The x coordinate of the center Cell to be revealed
     * @param y - The y coordinate of the center Cell to be revealed
     *
-    * @returns void
+    * @returns number for how many points earned
     */
-    chordTile(x: number, y: number) {
+    chordTile(x: number, y: number): number {
         if (this.cellData[y][x].minesNearby === 0) return;
         const neighbors = this.getNeighborTiles(x, y);
         const flagged = neighbors.filter(n => n.isFlagged);
         if (flagged.length === this.cellData[y][x].minesNearby) {
-            neighbors
-                .filter(n => !n.isFlagged)
-                .forEach(n => n.chunk.revealTile(n.getId().x, n.getId().y));
+            return neighbors.reduce((acc: number, cell: Cell) => {
+                return !cell.isFlagged
+                    ? acc + cell.chunk.revealTile(cell.getId().x, cell.getId().y)
+                    : acc
+            }, 0);
         }
+        return 0;
     }
 
     /**
@@ -302,10 +312,13 @@ export default class Chunk {
     */
     destroy() {
         this.minesLeftLabel.destroy();
+        this.distancelabel.destroy()
+        this.chunkDecorationRects.forEach(rect => rect.destroy());
+        this.chunkIndicatorRects.forEach(rect => rect.destroy());
+        this.bombLabelImage.destroy()
         this.cellData.forEach(row => {
             row.forEach(cell => {
-                cell.label.destroy();
-                cell.destroy();
+                cell.destroyAll();
             });
         });
         if (this.prevChunk) this.prevChunk.nextChunk = null;
@@ -325,8 +338,7 @@ export default class Chunk {
         const tilesToReveal = (Chunk.WIDTH*Chunk.HEIGHT)-this.totalMines;
         if (this.tilesRevealed >= tilesToReveal) {
             this.isCleared = true;
-            this.chunkIndicatorRects[0].setSize(Chunk.WIDTH*Cell.TILE_SIZE, Chunk.HEIGHT*Cell.TILE_SIZE-1);
-            // TODO refactor to flagAllTiles method
+            this.chunkIndicatorRects[0].setSize(Chunk.WIDTH*Cell.TILE_SIZE, Chunk.HEIGHT*Cell.TILE_SIZE);
             this.cellData.forEach((row) => {
                 row.filter((cell) => {
                     if (cell.isAMine) {
@@ -351,7 +363,8 @@ export default class Chunk {
      * @returns number from 0.1 to 0.5 representing mine density.
      */
     private exponentialDiff(x: number): number {
-        x = x/60;  // 60 means it should hit max mine density after 60 chunks
-        return Math.min(0.5, Math.pow(x, 2) + 0.1);
+        return Math.min(x/3 + 6, 30)/(Chunk.WIDTH*Chunk.HEIGHT);
+        // x = x/60;  // 60 means it should hit max mine density after 60 chunks
+        // return Math.min(0.5, Math.pow(x, 2) + 0.1);
     }
 }

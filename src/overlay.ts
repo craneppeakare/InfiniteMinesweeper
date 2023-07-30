@@ -2,12 +2,12 @@ import * as Phaser from 'phaser';
 import * as Config from './config';
 
 export default class Overlay extends Phaser.Scene {
-    private score = 0;
+    private score: number;
 
     private gameObjects: Phaser.GameObjects.Shape[];
     private modeSwitchButton: Phaser.GameObjects.Rectangle;
     private scoreLabel: Phaser.GameObjects.Text;
-    private flagMode = false;
+    private flagMode: boolean;
 
     private flagImage: Phaser.GameObjects.Image;
     private shovelImage: Phaser.GameObjects.Image;
@@ -18,7 +18,7 @@ export default class Overlay extends Phaser.Scene {
     * @returns a Scene
     */
     constructor () {
-        super({key: 'Overlay', active: true});
+        super('Overlay');
     }
 
     /**
@@ -30,6 +30,7 @@ export default class Overlay extends Phaser.Scene {
         this.load.image('mineImage', 'assets/mine.png');
         this.load.image('flagImage', 'assets/flag.png');
         this.load.image('shovelImage', 'assets/shovel.png');
+        this.load.spritesheet('catSprite', 'assets/runningCatSprite.png', { frameWidth: 32, frameHeight: 31 });
     }
 
     /**
@@ -38,6 +39,10 @@ export default class Overlay extends Phaser.Scene {
     * @returns void
     */
     create () {
+        // Set variable
+        this.score = 0;
+        this.flagMode = false;
+
         this.gameObjects = [
             // Top bar
             this.add.rectangle(0, 0, Config.GAME_WIDTH, 8, 0xffffff)
@@ -64,8 +69,11 @@ export default class Overlay extends Phaser.Scene {
                 .setOrigin(0, 0),
             ];
 
-        const style = { fontFamily: 'Silkscreen', fontSize: '18px' };
-        this.scoreLabel = this.add.text(35, 915, 'Score: ' + this.score, style)
+        this.anims.create({ key: 'run', frames: "catSprite", frameRate: 4, repeat: -1 });
+        this.add.sprite(230, 1000, 'catSprite')
+            .setScale(3)
+            .play("run");
+        this.scoreLabel = this.add.text(35, 915, 'Score: ' + this.score, Config.defaultStyle)
             .setOrigin(0, 0);
 
         this.modeSwitchButton = this.add.rectangle(Config.GAME_WIDTH/2, 940, 86, 86, 0xc0c0c0)
@@ -75,7 +83,7 @@ export default class Overlay extends Phaser.Scene {
                 this.modeSwitchButton.fillColor = 0xa0a0a0;
             })
             .on('pointerup', () => {
-                this.game.events.emit('mode-switch')
+                this.scene.get("Infinite Minesweeper").events.emit('mode-switch');
                 this.flagMode = !this.flagMode;
                 this.modeSwitchButton.fillColor = 0xc0c0c0;
                 if (this.flagMode) {
@@ -98,7 +106,9 @@ export default class Overlay extends Phaser.Scene {
             this.add.polygon(modeSwitchPos.x, modeSwitchPos.y, "86 0 78 8 78 78 8 78 0 86 86 86", 0x808080).setOrigin(0, 0)
         );
 
-        this.game.events.addListener('add-score', (score: number) => this.updateScore(score));
+        // Setup event listeners
+        this.events.removeListener("add-score");
+        this.events.on('add-score', (score: number) => this.updateScore(score));
     }
 
     updateScore(scoreToAdd: number) {

@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import * as Config from './config';
 import Chunk from './chunk';
 
 export default class Cell extends Phaser.GameObjects.Rectangle {
@@ -27,6 +28,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     private id: {x: number, y: number, chunkId: number};
     private labelStyle = { fontFamily: 'Silkscreen', fontSize: '28px', stroke: '#000000', strokeThickness: 0 };
     private flagImage: Phaser.GameObjects.Image;
+    private mineImage: Phaser.GameObjects.Image;
     private clickHighlight: Phaser.GameObjects.Rectangle;
     private bevelPolygons: Phaser.GameObjects.Polygon[];
 
@@ -56,7 +58,8 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.id = id;
         this.chunk = chunk;
         scene.add.existing(this);
-        this.label = this.scene.add.text(this.getCenter().x, this.getCenter().y, '', this.labelStyle)
+        this.label = this.scene.add.text(this.getCenter().x, this.getCenter().y, '', Config.defaultStyle)
+            .setFontSize(28)
             .setOrigin(0.5, 0.5);
         this.clickHighlight = this.scene.add.rectangle(pos.x, pos.y, 64, 64, 0xffffff, 150)
             .setOrigin(0, 0)
@@ -66,7 +69,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.updateColor();
 
         this.on('pointerdown', () => {
-            this.clickHighlight.setVisible(true)
+            this.clickHighlight.setVisible(true);
             if (this.isRevealed && this.minesNearby) {
                 chunk.getNeighborTiles(id.x, id.y).forEach(cell => {
                     cell.clickHighlight.setVisible(true);
@@ -74,7 +77,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             }
         });
         const disableHighlight = () => {
-            this.clickHighlight.setVisible(false)
+            this.clickHighlight.setVisible(false);
             if (this.isRevealed && this.minesNearby) {
                 chunk.getNeighborTiles(id.x, id.y).forEach(cell => {
                     cell.clickHighlight.setVisible(false);
@@ -88,22 +91,23 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     /**
     * Reveals the tile
     *
-    * @returns void
+    * @returns number for amount of points
     */
-    reveal() {
-        if (this.isFlagged || this.isRevealed) return;
+    reveal(): number {
+        if (this.isFlagged || this.isRevealed) return 0;
         this.isRevealed = true;
         this.clickHighlight.setVisible(false);
         this.updateColor();
         if (this.isAMine) {
-            this.scene.add.image(this.getCenter().x, this.getCenter().y, 'mineImage');
+            this.mineImage = this.scene.add.image(this.getCenter().x, this.getCenter().y, 'mineImage');
             this.scene.events.emit('gameover');
+            return 0;
         } else {
-            this.scene.game.events.emit('add-score', Cell.TILE_POINTS[this.minesNearby]);
             if (this.minesNearby) {
                 this.label.setText(this.minesNearby.toString());
                 this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1]);
             }
+            return Cell.TILE_POINTS[this.minesNearby];
         }
     }
 
@@ -158,6 +162,20 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             onComplete: () => this.setInteractive(),
             duration: 1225,
         });
+    }
+
+    /**
+    * Destroy all game elements of the Cell allowing it to be garbage collected
+    *
+    * @returns void
+    */
+    destroyAll() {
+        this.flagImage.destroy();
+        if (this.mineImage) this.mineImage.destroy();
+        this.clickHighlight.destroy();
+        this.bevelPolygons.forEach(p => p.destroy());
+        this.label.destroy();
+        this.destroy();
     }
 
     /**
