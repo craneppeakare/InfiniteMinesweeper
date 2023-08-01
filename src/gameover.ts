@@ -41,10 +41,11 @@ export default class GameOver extends Phaser.Scene {
     * @returns void
     */
     create () {
+        this.sound.stopByKey('bg');
         window.navigator.vibrate(200);
 
-        // const gameoverString = `GAME OVER\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
-        const gameoverString = `I LOVE YOU CJ\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
+        const gameoverString = `GAME OVER\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
+        // const gameoverString = `I LOVE YOU CJ\n\nDISTANCE: ${this.maxDistance}m\nSCORE: ${this.score}\nHIGHSCORE: ${this.highscore}`;
         this.add.text(Config.GAME_WIDTH/2, Config.GAME_HEIGHT/2, gameoverString)
             .setStyle({ ...Config.largeStyle, align: 'center' })
             .setOrigin(0.5, 0.5);
@@ -56,9 +57,19 @@ export default class GameOver extends Phaser.Scene {
 
         const restartButton = new Button(this, Config.GAME_WIDTH/2, 800, "Restart");
         restartButton.onClick(() => {
-            // this.scene.stop();
+            if (Config.GameSettings.playBGM) {
+                // this.sound.stopByKey('bg');
+                this.sound.play('bg', { loop: true });
+            }
             this.scene.start("Infinite Minesweeper");
             this.scene.start("Overlay");
+        });
+
+        const backToMenuButton = new Button(this, Config.GAME_WIDTH/2, 900, "Back To Menu");
+        backToMenuButton.onClick(() => {
+            this.game.scene.stop("Infinite Minesweeper");
+            this.game.scene.stop("Overlay");
+            this.scene.start("MainMenu");
         });
     }
 }

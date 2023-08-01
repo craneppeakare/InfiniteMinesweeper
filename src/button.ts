@@ -14,8 +14,6 @@ export default class Button {
     * @param scene - The scene which this Cell belongs to
     * @param x - The x position of the Button on the screen
     * @param y - The y position of the Button on the screen
-    * @param width - The width of the Button on the screen
-    * @param height - The height of the Button on the screen
     * @param text - The text that is displayed on the button
     *
     * @returns a Cell

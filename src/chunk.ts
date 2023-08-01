@@ -12,6 +12,8 @@ export default class Chunk {
     private minesToFlagLeft: number;
     private tilesRevealed = 0;
     private chunkId: number;
+    private events: Phaser.Events.EventEmitter;
+    private goldParticleEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
 
     minesLeftLabel: Phaser.GameObjects.Text;
     distancelabel: Phaser.GameObjects.Text;
@@ -38,6 +40,7 @@ export default class Chunk {
         const mineDensity = this.exponentialDiff(this.chunkId);
         this.totalMines = Math.floor((Chunk.HEIGHT*Chunk.WIDTH)*mineDensity);
         this.minesToFlagLeft = this.totalMines;
+        this.events = new Phaser.Events.EventEmitter();
         
         // Create border indent on the sides
         this.chunkDecorationRects.push(this.scene.add.rectangle(xPos, yPos, 8, Cell.TILE_SIZE*Chunk.HEIGHT, 0xffffff)
@@ -91,6 +94,22 @@ export default class Chunk {
             this.scene.add.rectangle(xPos, yPos, Cell.TILE_SIZE*Chunk.WIDTH, 0, 0xaaaa00, 200).setOrigin(0, 0),
             this.scene.add.rectangle(xPos, yPos+(Cell.TILE_SIZE*Chunk.HEIGHT)-1, Cell.TILE_SIZE*Chunk.WIDTH, 3, 0xaaaa00).setOrigin(0, 0),
         )
+
+        const geom = new Phaser.Geom.Rectangle(0, 0, Chunk.WIDTH*Cell.TILE_SIZE, Chunk.HEIGHT*Cell.TILE_SIZE);
+        this.goldParticleEmitter = this.scene.add.particles(0, 0, 'goldParticle', {
+            emitZone: new Phaser.GameObjects.Particles.Zones.RandomZone(geom),
+            alpha: { start: 1, end: 0 },
+            rotate: { min: 0, max: 360 },
+            quantity: { min: 64, max: 96 },
+            gravityY: 1300,
+            scale: 0.3,
+            speed: { min: 100, max: 250 },
+            lifespan: 1225,
+            emitting: false,
+        });
+        this.goldParticleEmitter.depth = 1;
+        this.goldParticleEmitter.once('chunk-cleared', () => 
+            this.goldParticleEmitter.emitParticleAt(this.cellData[0][0].x, this.cellData[0][0].y))
     }
 
     /**
@@ -350,6 +369,7 @@ export default class Chunk {
                     }
                 });
             });
+            this.goldParticleEmitter.emit('chunk-cleared');
             this.scene.events.emit('chunk-cleared');
         }
     }

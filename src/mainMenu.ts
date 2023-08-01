@@ -4,8 +4,6 @@ import Button from './button';
 
 export default class MainMenu extends Phaser.Scene {
 
-    private soundOnButton: Phaser.GameObjects.Image;
-    private soundOffButton: Phaser.GameObjects.Image;
     private bgm: Phaser.GameObjects.Shape;
 
     /**
@@ -23,8 +21,6 @@ export default class MainMenu extends Phaser.Scene {
     * @returns void
     */
     preload () {
-        this.load.image('soundOn', 'assets/icons/speaker.png');
-        this.load.image('soundOff', 'assets/icons/speakerCrossed.png');
         this.load.image('mainMenuBg', 'assets/mainMenuBg.png');
         this.load.image('titleImage', 'assets/titleImage.png');
 
@@ -51,25 +47,10 @@ export default class MainMenu extends Phaser.Scene {
         });
 
         this.game.sound.setVolume(0.1); // TODO remove
-        this.sound.play('bg', { loop: true });
-        this.soundOnButton = this.add.image(Config.GAME_WIDTH-48, 48, "soundOn")
-            .setInteractive()
-            .on("pointerup", () => {
-                this.sound.get('bg').pause();
-                this.soundOnButton.disableInteractive().setVisible(false);
-                this.soundOffButton.setInteractive().setVisible(true);
-                this.shake(this.soundOffButton);
-            });
-        this.soundOffButton = this.add.image(Config.GAME_WIDTH-48, 48, "soundOff")
-            .setInteractive()
-            .disableInteractive()
-            .setVisible(false)
-            .on("pointerup", () => {
-                this.sound.get('bg').play();
-                this.soundOffButton.disableInteractive().setVisible(false);
-                this.soundOnButton.setInteractive().setVisible(true);
-                this.shake(this.soundOnButton);
-            });
+        if (Config.GameSettings.playBGM) {
+            this.sound.stopByKey('bg');
+            this.sound.play('bg', { loop: true })
+        }
 
         const title = this.add.image(Config.GAME_WIDTH/2, 200, "titleImage")
             .setOrigin(0.5, 0.5);
@@ -83,29 +64,20 @@ export default class MainMenu extends Phaser.Scene {
             loop: -1,
         });
 
-        new Button(this, Config.GAME_WIDTH/2, 500,"Start Game")
+        new Button(this, Config.GAME_WIDTH/2, 600,"Start Game")
             .onClick(() => {
                 this.scene.start("Infinite Minesweeper");
                 this.scene.start("Overlay");
             });
-        new Button(this, Config.GAME_WIDTH/2, 600,"Continue");
-        new Button(this, Config.GAME_WIDTH/2, 700,"Options");
-        new Button(this, Config.GAME_WIDTH/2, 800,"Exit Game");
+        // new Button(this, Config.GAME_WIDTH/2, 600,"Continue");
+        new Button(this, Config.GAME_WIDTH/2, 700,"Options")
+            .onClick(() => {
+                this.scene.start("Settings");
+            });
+        new Button(this, Config.GAME_WIDTH/2, 800,"Exit Game")
+            .onClick(() => {
+                this.game.destroy(true);
+            });
 
-    }
-
-    /**
-    * Function to tween an object to make it shake in place
-    *
-    * @returns void
-    */
-    private shake(obj: Phaser.GameObjects.GameObject) {
-        this.tweens.add({
-            targets: obj,
-            ease: Phaser.Math.Easing.Elastic.Out,
-            angle: '+=10',
-            yoyo: true,
-            duration: 200
-        });
     }
 }

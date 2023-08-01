@@ -34,6 +34,9 @@ export default class InfiniteSweeper extends Phaser.Scene {
         this.load.image('flagImage', 'assets/flag.png');
         this.load.image('shovelImage', 'assets/shovel.png');
 
+        this.load.image('digParticle', 'assets/revealParticle.png');
+        this.load.image('goldParticle', 'assets/goldParticle.png');
+
         this.load.audio('dig', 'assets/sounds/clearline.wav');
         this.load.audio('chunkClear', 'assets/sounds/btb_3.wav');
 
@@ -41,8 +44,9 @@ export default class InfiniteSweeper extends Phaser.Scene {
         this.load.audio('bigClear2', 'assets/sounds/clearquad.wav');
         this.load.audio('bigClear3', 'assets/sounds/clearbtb.wav');
 
-        this.load.audio('explosion', 'assets/sounds/topout.wav');
+        this.load.audio('explosion', 'assets/sounds/explosion.wav');
         this.load.audio('gameover', 'assets/sounds/failure.wav');
+        this.load.audio('shaking', 'assets/sounds/shaking.wav');
     }
 
     /**
@@ -122,13 +126,13 @@ export default class InfiniteSweeper extends Phaser.Scene {
             this.sound.play('dig');
             this.scene.get("Overlay").events.emit('add-score', points);
             this.popupPoints(points);
-            if (points > 2000) {
+            if (points > 1500) {
                 this.sound.play('bigClear3');
                 this.cameras.main.shake(200, 0.01);
-            } else if (points > 1500) {
+            } else if (points > 1000) {
                 this.sound.play('bigClear2');
                 this.cameras.main.shake(150, 0.005);
-            } else if (points > 1000) {
+            } else if (points > 500) {
                 this.sound.play('bigClear1');
                 this.cameras.main.shake(120, 0.002);
             } else {
@@ -192,6 +196,8 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     private scrollAllChunksDown() {
+        this.cameras.main.shake(1225, 0.0015);
+        this.sound.play('shaking', { volume: 0.5, duration: 1225 });
         if (this.firstClear) {
             this.firstClear = false;
             const dy = (Cell.TILE_SIZE*Chunk.HEIGHT)-(2*Cell.TILE_SIZE);

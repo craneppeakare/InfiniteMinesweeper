@@ -31,6 +31,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
     private mineImage: Phaser.GameObjects.Image;
     private clickHighlight: Phaser.GameObjects.Rectangle;
     private bevelPolygons: Phaser.GameObjects.Polygon[];
+    private digParticleEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
 
     chunk: Chunk;
     isAMine = false;
@@ -67,6 +68,18 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.flagImage = this.scene.add.image(this.getCenter().x, this.getCenter().y, 'flagImage')
             .setVisible(false);
         this.updateColor();
+        this.digParticleEmitter = this.scene.add.particles(0, 0, 'digParticle', {
+            emitZone: new Phaser.GameObjects.Particles.Zones.RandomZone(this.geom),
+            alpha: { start: 1, end: 0 },
+            rotate: { min: 0, max: 360 },
+            quantity: { min: 8, max: 15 },
+            gravityY: 1300,
+            scale: 0.5,
+            speed: { min: 100, max: 250 },
+            lifespan: 800,
+            emitting: false,
+        });
+        this.digParticleEmitter.depth = 1;
 
         this.on('pointerdown', () => {
             this.clickHighlight.setVisible(true);
@@ -103,6 +116,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
             this.scene.events.emit('gameover');
             return 0;
         } else {
+            this.digParticleEmitter.emitParticleAt(this.getTopLeft().x, this.getTopLeft().y);
             if (this.minesNearby) {
                 this.label.setText(this.minesNearby.toString());
                 this.label.setColor(Cell.LABEL_COLORS[this.minesNearby - 1]);
@@ -175,6 +189,7 @@ export default class Cell extends Phaser.GameObjects.Rectangle {
         this.clickHighlight.destroy();
         this.bevelPolygons.forEach(p => p.destroy());
         this.label.destroy();
+        this.digParticleEmitter.destroy();
         this.destroy();
     }
 
