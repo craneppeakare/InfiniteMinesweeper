@@ -6,9 +6,6 @@ import CheckBoxToggleButton from './checkboxToggleButton';
 
 export default class SettingScene extends Phaser.Scene {
 
-    private soundOnButton: Phaser.GameObjects.Image;
-    private soundOffButton: Phaser.GameObjects.Image;
-
     /**
     * Constructor for the main Scene
     *
@@ -40,7 +37,7 @@ export default class SettingScene extends Phaser.Scene {
         this.add.text(Config.GAME_WIDTH/2, 100, "Settings", Config.largeStyle)
             .setOrigin(0.5, 0.5);
 
-        const bgmSetting = new SoundToggleButton(this, 64, 200, "Toggle BGM")
+        const bgmSetting = new SoundToggleButton(this, 64, 200,"Toggle BGM", Config.GameSettings.playBGM)
             .setOnToggle(() => {
                 Config.GameSettings.playBGM = true;
                 this.sound.stopByKey('bg');
@@ -51,9 +48,21 @@ export default class SettingScene extends Phaser.Scene {
                 this.sound.stopByKey('bg');
             });
 
-        const sfxSetting = new SoundToggleButton(this, 64, 300, "Toggle SFX")
+        const sfxSetting = new SoundToggleButton(this, 64, 300, "Toggle SFX", Config.GameSettings.soundEffectsOn)
+            .setOnToggle(() => {
+                Config.GameSettings.soundEffectsOn = true;
+            })
+            .setOffToggle(() => {
+                Config.GameSettings.soundEffectsOn = false;
+            });
 
-        const toggleScreenShake = new CheckBoxToggleButton(this, 64, 400, "Enable Screen Shake");
+        const toggleScreenShake = new CheckBoxToggleButton(this, 64, 400, "Enable Screen Shake", Config.GameSettings.screenShake)
+            .setOnToggle(() => {
+                Config.GameSettings.screenShake = true;
+            })
+            .setOffToggle(() => {
+                Config.GameSettings.screenShake = false;
+            });
 
         const backToMenuButton = new Button(this, Config.GAME_WIDTH/2, 900, "Back To Menu");
         backToMenuButton.onClick(() => {

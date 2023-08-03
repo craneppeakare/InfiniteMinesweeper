@@ -91,8 +91,8 @@ export default class Chunk {
 
         // Create chunk outline indicator
         this.chunkIndicatorRects.push(
-            this.scene.add.rectangle(xPos, yPos, Cell.TILE_SIZE*Chunk.WIDTH, 0, 0xaaaa00, 200).setOrigin(0, 0),
-            this.scene.add.rectangle(xPos, yPos+(Cell.TILE_SIZE*Chunk.HEIGHT)-1, Cell.TILE_SIZE*Chunk.WIDTH, 3, 0xaaaa00).setOrigin(0, 0),
+            this.scene.add.rectangle(xPos, yPos, Cell.TILE_SIZE*Chunk.WIDTH, 0, 0x00aaaa, 200).setOrigin(0, 0),
+            this.scene.add.rectangle(xPos, yPos+(Cell.TILE_SIZE*Chunk.HEIGHT)-1, Cell.TILE_SIZE*Chunk.WIDTH, 3, 0x00aaaa).setOrigin(0, 0),
         )
 
         const geom = new Phaser.Geom.Rectangle(0, 0, Chunk.WIDTH*Cell.TILE_SIZE, Chunk.HEIGHT*Cell.TILE_SIZE);

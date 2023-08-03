@@ -123,18 +123,18 @@ export default class InfiniteSweeper extends Phaser.Scene {
         if (points) {
             this.score += points;
             this.combo += 1;
-            this.sound.play('dig');
+            if (Config.GameSettings.soundEffectsOn) this.sound.play('dig');
             this.scene.get("Overlay").events.emit('add-score', points);
             this.popupPoints(points);
             if (points > 1500) {
-                this.sound.play('bigClear3');
-                this.cameras.main.shake(200, 0.01);
+                if (Config.GameSettings.soundEffectsOn) this.sound.play('bigClear3');
+                if (Config.GameSettings.screenShake) this.cameras.main.shake(200, 0.01);
             } else if (points > 1000) {
-                this.sound.play('bigClear2');
-                this.cameras.main.shake(150, 0.005);
+                if (Config.GameSettings.soundEffectsOn) this.sound.play('bigClear2');
+                if (Config.GameSettings.screenShake) this.cameras.main.shake(150, 0.005);
             } else if (points > 500) {
-                this.sound.play('bigClear1');
-                this.cameras.main.shake(120, 0.002);
+                if (Config.GameSettings.soundEffectsOn) this.sound.play('bigClear1');
+                if (Config.GameSettings.screenShake) this.cameras.main.shake(120, 0.002);
             } else {
             }
         } else {
@@ -169,7 +169,7 @@ export default class InfiniteSweeper extends Phaser.Scene {
     */
     private chunkCleared() {
         if (this.firstClear ? this.chunkList[0].isCleared : this.chunkList[1].isCleared) {
-            this.sound.play('chunkClear');
+            if (Config.GameSettings.soundEffectsOn) this.sound.play('chunkClear');
             if (!this.firstClear) {
                 // Spawn in a new chunk
                 const centerOffset = (Config.GAME_WIDTH/2) - (Cell.TILE_SIZE * Chunk.WIDTH / 2)
@@ -196,8 +196,8 @@ export default class InfiniteSweeper extends Phaser.Scene {
     * @returns void
     */
     private scrollAllChunksDown() {
-        this.cameras.main.shake(1225, 0.0015);
-        this.sound.play('shaking', { volume: 0.5, duration: 1225 });
+        if (Config.GameSettings.screenShake) this.cameras.main.shake(1225, 0.0015);
+        if (Config.GameSettings.soundEffectsOn) this.sound.play('shaking', { volume: 0.5, duration: 1225 });
         if (this.firstClear) {
             this.firstClear = false;
             const dy = (Cell.TILE_SIZE*Chunk.HEIGHT)-(2*Cell.TILE_SIZE);
@@ -227,8 +227,8 @@ export default class InfiniteSweeper extends Phaser.Scene {
     */
     private onGameover() {
         this.chunkList.forEach(cl => cl.revealAllMines());
-        this.sound.play('explosion', { volume: 0.5 });
-        this.sound.play('gameover');
+        if (Config.GameSettings.soundEffectsOn) this.sound.play('explosion', { volume: 0.5 });
+        if (Config.GameSettings.soundEffectsOn) this.sound.play('gameover');
         this.scene.run('Gameover', {score: this.score, highscore: 0, maxDistance: (this.chunksCleared+this.NUMBER_OF_CHUNKS)*100});
     }
 }

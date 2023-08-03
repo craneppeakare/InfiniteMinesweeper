@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser';
-import * as Config from './config';
 import { defaultStyle } from './config';
 
 export default class SoundToggleButton {
@@ -21,14 +20,13 @@ export default class SoundToggleButton {
     *
     * @returns a Cell
     */
-    constructor(scene: Phaser.Scene, x: number, y: number, text: string, style=defaultStyle) {
+    constructor(scene: Phaser.Scene, x: number, y: number, text: string, startValue=true, style=defaultStyle) {
         this.scene = scene;
 
         this.OnToggleButton = scene.add.image(x, y, "soundOn")
             .setOrigin(0, 0)
             .setSize(64, 64)
             .setScale(0.6)
-            .setInteractive()
             .on("pointerup", () => {
                 this.OnToggleButton.disableInteractive().setVisible(false);
                 this.OffToggleButton.setInteractive().setVisible(true);
@@ -39,15 +37,22 @@ export default class SoundToggleButton {
             .setOrigin(0, 0)
             .setSize(64, 64)
             .setScale(0.6)
-            .setInteractive()
-            .disableInteractive()
-            .setVisible(false)
             .on("pointerup", () => {
                 this.OffToggleButton.disableInteractive().setVisible(false);
                 this.OnToggleButton.setInteractive().setVisible(true);
                 this.shake(this.OnToggleButton);
                 this.onToggle();
             });
+
+        if (startValue) {
+            this.OnToggleButton.setInteractive();
+            this.OffToggleButton.disableInteractive();
+            this.OffToggleButton.setVisible(false);
+        } else {
+            this.OnToggleButton.disableInteractive();
+            this.OnToggleButton.setVisible(false);
+            this.OffToggleButton.setInteractive();
+        }
 
         const width = this.OnToggleButton.width
         this.buttonText = scene.add.text(x + width + 15, y, text, style)

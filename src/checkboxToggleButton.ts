@@ -21,14 +21,13 @@ export default class CheckBoxToggleButton {
     *
     * @returns a Cell
     */
-    constructor(scene: Phaser.Scene, x: number, y: number, text: string, style=defaultStyle) {
+    constructor(scene: Phaser.Scene, x: number, y: number, text: string, startValue=true, style=defaultStyle) {
         this.scene = scene;
 
         this.checkedBox = scene.add.image(x, y, "checkedbox")
             .setOrigin(0, 0)
             .setSize(64, 64)
             .setScale(2.0)
-            .setInteractive()
             .on("pointerup", () => {
                 this.checkedBox.disableInteractive().setVisible(false);
                 this.uncheckedBox.setInteractive().setVisible(true);
@@ -39,15 +38,22 @@ export default class CheckBoxToggleButton {
             .setOrigin(0, 0)
             .setSize(64, 64)
             .setScale(2.0)
-            .setInteractive()
-            .disableInteractive()
-            .setVisible(false)
             .on("pointerup", () => {
                 this.uncheckedBox.disableInteractive().setVisible(false);
                 this.checkedBox.setInteractive().setVisible(true);
                 this.shake(this.checkedBox);
                 this.onToggle();
             });
+
+        if (startValue) {
+            this.checkedBox.setInteractive();
+            this.uncheckedBox.disableInteractive();
+            this.uncheckedBox.setVisible(false);
+        } else {
+            this.checkedBox.disableInteractive();
+            this.checkedBox.setVisible(false);
+            this.uncheckedBox.setInteractive();
+        }
 
         const width = this.checkedBox.width;
         this.buttonText = scene.add.text(x + width + 15, y, text, style)
