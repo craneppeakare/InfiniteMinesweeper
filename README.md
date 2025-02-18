@@ -1,6 +1,6 @@
 # Infinite Minesweeper - An Infinite Scrolling Minesweeper App
 
-Uncover as many tiles as possible and keep moving forward. Mines become more common the further you reach. Live version hosted [here](https://craneppeakare.github.io/minesweeper/)
+Uncover as many tiles as possible and keep moving forward. Mines become more common the further you reach. Live version hosted [here](https://craneppeakare.github.io/InfiniteMinesweeper/)
 
 ## Install
 
